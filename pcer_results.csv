@@ -1,0 +1,7 @@
+Method,Tag,Latency,NetworkLife
+Baseline,Critical,150.5,80
+Baseline,Standard,120.0,80
+Baseline,Bulk,200.0,80
+PCER,Critical,45.2,95
+PCER,Standard,110.0,95
+PCER,Bulk,210.0,95
