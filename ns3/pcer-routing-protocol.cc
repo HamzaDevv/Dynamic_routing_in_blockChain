@@ -51,6 +51,13 @@ double PcerRoutingProtocol::CalculateCost(uint8_t tag,
     w2_energy = 1.0;
   }
 
+  // --- SURVIVAL THRESHOLD ---
+  // If battery is critical (< 5%), avoid this node at all costs.
+  // This prevents critical data from being routed through dying nodes.
+  if (neighbor.energy < 0.05) {
+    return std::numeric_limits<double>::max();
+  }
+
   double energy_cost =
       (neighbor.energy > 0.0001) ? (1.0 / neighbor.energy) : 10000.0;
   return (w1_delay * neighbor.delay) + (w2_energy * energy_cost);
