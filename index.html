@@ -622,10 +622,22 @@
           <div class="score-title">Industry RPL
             <span class="badge" id="badgeRpl">ACTIVE</span>
           </div>
-          <div class="metric-grid">
+          <div class="metric-grid" style="grid-template-columns: 1fr 1fr">
             <div class="metric"><span>Avg Latency</span><span id="rplLatency" style="color:#7c3aed">0 ms</span></div>
-            <div class="metric loss"><span>Lost</span><span id="rplLoss" style="color:#7c3aed">0</span></div>
-            <div class="metric"><span>Sent</span><span id="rplDelivered" style="color:#0f172a">0</span></div>
+            <div class="metric"><span>Total Delivered</span><span id="rplDelivered" style="color:#0f172a">0</span>
+            </div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric" style="color:#dc2626"><span>C. Latency</span><span id="rplLat0">0 ms</span></div>
+            <div class="metric" style="color:#d97706"><span>S. Latency</span><span id="rplLat1">0 ms</span></div>
+            <div class="metric" style="color:#2563eb"><span>B. Latency</span><span id="rplLat2">0 ms</span></div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric loss" style="color:#dc2626"><span>Crit. Lost</span><span id="rplLoss0">0</span></div>
+            <div class="metric loss" style="color:#d97706"><span>Std. Lost</span><span id="rplLoss1">0</span></div>
+            <div class="metric loss" style="color:#2563eb"><span>Bulk Lost</span><span id="rplLoss2">0</span></div>
           </div>
         </div>
       </div>
@@ -1097,9 +1109,13 @@
       const r = stats.rpl;
       const totRplCnt = r.count[0] + r.count[1] + r.count[2];
       const totRplSum = r.sum[0] + r.sum[1] + r.sum[2];
-      const totRplLost = r.lost[0] + r.lost[1] + r.lost[2];
       document.getElementById('rplLatency').textContent = totRplCnt > 0 ? (totRplSum / totRplCnt).toFixed(1) + ' ms' : '0 ms';
-      document.getElementById('rplLoss').textContent = totRplLost;
+      document.getElementById('rplLat0').textContent = r.count[0] > 0 ? (r.sum[0] / r.count[0]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('rplLat1').textContent = r.count[1] > 0 ? (r.sum[1] / r.count[1]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('rplLat2').textContent = r.count[2] > 0 ? (r.sum[2] / r.count[2]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('rplLoss0').textContent = r.lost[0];
+      document.getElementById('rplLoss1').textContent = r.lost[1];
+      document.getElementById('rplLoss2').textContent = r.lost[2];
       document.getElementById('rplDelivered').textContent = totRplCnt;
     }
 
@@ -1248,23 +1264,17 @@
         document.getElementById('card' + c).style.opacity = isAct ? '1' : '0.4';
       });
 
-      const pName = p === 'baseline' ? 'OSPF Baseline' : (p === 'trad-pcer' ? 'Traditional PCER' : 'Proposed PCER');
+      let pName = 'OSPF Baseline';
+      if (p === 'trad-pcer') pName = 'Traditional PCER';
+      if (p === 'pcer') pName = 'Proposed PCER';
+      if (p === 'rpl') pName = 'Industry RPL';
 
-      // RESET NETWORK STATE FOR NEW PROTOCOL TO ENSURE ISOLATED COMPARISON
+      // PAUSE SIMULATION ON PROTOCOL SWITCH
       playing = false;
       document.getElementById('btnPlay').style.display = '';
       document.getElementById('btnPause').style.display = 'none';
 
-      initNodes();
-      packets = [];
-      simTime = 0;
-      packetIndex = 0;
-      stats.baseline = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
-      stats.tradPcer = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
-      stats.pcer = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
-      updateScorecards();
-      document.getElementById('eventLog').innerHTML = '';
-      logEvent(`<b>Protocol switched to ${pName}. Network reset to initial state.</b>`, "");
+      logEvent(`<b>Protocol switched to ${pName}. Simulation paused.</b>`, "");
     }
 
     function init() {
@@ -1296,13 +1306,25 @@
         packets = [];
         simTime = 0;
         packetIndex = 0;
-        stats.baseline = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
-        stats.tradPcer = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
-        stats.pcer = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
-        stats.rpl = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
+
+        let resetName = '';
+        if (protocol === 'baseline') {
+          stats.baseline = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
+          resetName = 'OSPF Baseline';
+        } else if (protocol === 'trad-pcer') {
+          stats.tradPcer = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
+          resetName = 'Traditional PCER';
+        } else if (protocol === 'pcer') {
+          stats.pcer = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
+          resetName = 'Proposed PCER';
+        } else if (protocol === 'rpl') {
+          stats.rpl = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
+          resetName = 'Industry RPL';
+        }
+
         updateScorecards();
         document.getElementById('eventLog').innerHTML = '';
-        logEvent('Network reset. Battery fully charged.');
+        logEvent(`<b>Network reset! Only ${resetName} stats became 0.</b>`, "");
       };
       document.getElementById('btnManualCrit').onclick = () => spawnManualPacket(); // Tag 0 Critical
 

@@ -1,0 +1,2231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCER-T v4 — Adaptive Hybrid IoT Routing</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #060910;
+            --surface: #0b0f18;
+            --surface2: #0f1520;
+            --surface3: #131c2c;
+            --border: #192338;
+            --border2: #213047;
+            --text: #d8e4f0;
+            --muted: #3a5272;
+            --muted2: #536a88;
+
+            --red: #f04040;
+            --orange: #f07830;
+            --yellow: #e8b820;
+            --green: #20c060;
+            --teal: #10b8a8;
+            --blue: #2878f0;
+            --violet: #9040f0;
+            --cyan: #08c8e8;
+            --lime: #78d810;
+            --gold: #f8c030;
+            --amber: #ff9800;
+
+            --red-a: rgba(240, 64, 64, 0.12);
+            --yellow-a: rgba(232, 184, 32, 0.12);
+            --green-a: rgba(32, 192, 96, 0.12);
+            --violet-a: rgba(144, 64, 240, 0.12);
+            --cyan-a: rgba(8, 200, 232, 0.12);
+            --gold-a: rgba(248, 192, 48, 0.14);
+            --blue-a: rgba(40, 120, 240, 0.12);
+            --teal-a: rgba(16, 184, 168, 0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Rajdhani', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            font-size: 13px;
+        }
+
+        /* ── SCAN LINES ── */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, .07) 2px, rgba(0, 0, 0, .07) 4px);
+            pointer-events: none;
+            z-index: 9999;
+            opacity: .4;
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            grid-template-rows: 58px 1fr 56px;
+            height: 100vh;
+        }
+
+        /* ══ HEADER ══ */
+        .hdr {
+            grid-column: 1/-1;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 20;
+            gap: 12px;
+            position: relative;
+        }
+
+        .hdr::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--cyan), var(--gold), var(--cyan), transparent);
+            opacity: .4;
+        }
+
+        .logo {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .logo em {
+            color: var(--gold);
+            font-style: normal;
+            text-shadow: 0 0 18px rgba(248, 192, 48, .5);
+        }
+
+        .logo small {
+            font-size: 9px;
+            font-weight: 400;
+            color: var(--muted2);
+            margin-left: 10px;
+            letter-spacing: 2px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        /* ── STATUS CHIP ── */
+        .status-chip {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 5px 12px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            color: var(--muted2);
+        }
+
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--muted);
+            transition: all .3s;
+        }
+
+        .pulse-dot.active {
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .4
+            }
+        }
+
+        /* ── PROTO TABS ── */
+        .proto-bar {
+            display: flex;
+            gap: 2px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 3px;
+            flex-shrink: 0;
+        }
+
+        .pb {
+            padding: 5px 13px;
+            border: 1px solid transparent;
+            border-radius: 5px;
+            font-family: 'Exo 2', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            background: transparent;
+            color: var(--muted2);
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            transition: all .2s;
+            white-space: nowrap;
+        }
+
+        .pb:hover:not(.pa-baseline):not(.pa-rpl):not(.pa-pcertv3):not(.pa-pcertv4) {
+            color: var(--text);
+            background: var(--surface2)
+        }
+
+        .pb.pa-baseline {
+            background: var(--red-a);
+            color: var(--red);
+            border-color: rgba(240, 64, 64, .3)
+        }
+
+        .pb.pa-rpl {
+            background: var(--violet-a);
+            color: var(--violet);
+            border-color: rgba(144, 64, 240, .3)
+        }
+
+        .pb.pa-pcertv3 {
+            background: var(--yellow-a);
+            color: var(--yellow);
+            border-color: rgba(232, 184, 32, .3)
+        }
+
+        .pb.pa-pcertv4 {
+            background: linear-gradient(135deg, rgba(8, 200, 232, .15), rgba(248, 192, 48, .15));
+            color: var(--gold);
+            border-color: rgba(248, 192, 48, .5);
+            box-shadow: 0 0 14px rgba(8, 200, 232, .15);
+        }
+
+        /* ══ CANVAS ══ */
+        .canvas-area {
+            position: relative;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            z-index: 2
+        }
+
+        .cgrid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 1;
+            opacity: .18;
+        }
+
+        /* ══ SIDEBAR ══ */
+        .sidebar {
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sb-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0
+        }
+
+        .sbt {
+            flex: 1;
+            padding: 11px 0;
+            font-size: 9px;
+            font-weight: 700;
+            text-align: center;
+            cursor: pointer;
+            color: var(--muted2);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            border-bottom: 2px solid transparent;
+            transition: all .2s;
+            font-family: 'Exo 2', sans-serif;
+        }
+
+        .sbt.on {
+            color: var(--cyan);
+            border-bottom-color: var(--cyan)
+        }
+
+        .sbp {
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            flex: 1
+        }
+
+        .sbp.on {
+            display: flex
+        }
+
+        /* ══ DASHBOARD ══ */
+        .dash {
+            overflow-y: auto;
+            flex: 1;
+            padding: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent
+        }
+
+        .scard {
+            border-radius: 6px;
+            padding: 11px 13px;
+            margin-bottom: 7px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            position: relative;
+            overflow: hidden;
+            transition: opacity .3s, box-shadow .3s;
+        }
+
+        .scard::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            border-radius: 2px;
+        }
+
+        .scard.s-baseline::before {
+            background: var(--red)
+        }
+
+        .scard.s-rpl::before {
+            background: var(--violet)
+        }
+
+        .scard.s-pcertv3::before {
+            background: var(--yellow)
+        }
+
+        .scard.s-pcertv4::before {
+            background: linear-gradient(180deg, var(--cyan), var(--gold));
+            box-shadow: 0 0 10px rgba(8, 200, 232, .3);
+        }
+
+        .scard.s-pcertv4 {
+            border-color: rgba(8, 200, 232, .2)
+        }
+
+        .sc-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px
+        }
+
+        .sc-name {
+            font-size: 12px;
+            font-weight: 700;
+            font-family: 'Exo 2', sans-serif;
+            letter-spacing: .5px
+        }
+
+        .badge {
+            font-size: 7px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            display: none;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .badge.on {
+            display: inline-block
+        }
+
+        .badge.b-baseline {
+            background: var(--red-a);
+            color: var(--red)
+        }
+
+        .badge.b-rpl {
+            background: var(--violet-a);
+            color: var(--violet)
+        }
+
+        .badge.b-pcertv3 {
+            background: var(--yellow-a);
+            color: var(--yellow)
+        }
+
+        .badge.b-pcertv4 {
+            background: linear-gradient(90deg, var(--cyan-a), var(--gold-a));
+            color: var(--gold)
+        }
+
+        .mg {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px
+        }
+
+        .met .lbl {
+            font-size: 9px;
+            color: var(--muted2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 3px;
+            font-family: 'Exo 2', sans-serif
+        }
+
+        .met .v {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text)
+        }
+
+        .met .v.red {
+            color: var(--red)
+        }
+
+        .met .v.green {
+            color: var(--green)
+        }
+
+        .met .v.violet {
+            color: var(--violet)
+        }
+
+        .met .v.gold {
+            color: var(--gold)
+        }
+
+        .met .v.cyan {
+            color: var(--cyan)
+        }
+
+        .sub-mg {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border)
+        }
+
+        /* advantage callout */
+        .adv-box {
+            background: linear-gradient(135deg, rgba(8, 200, 232, .06), rgba(248, 192, 48, .06));
+            border: 1px solid rgba(8, 200, 232, .2);
+            border-radius: 7px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .adv-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, var(--cyan), var(--gold), var(--cyan));
+            opacity: .5;
+        }
+
+        .adv-title {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            color: var(--cyan);
+            margin-bottom: 7px;
+            font-family: 'Exo 2', sans-serif
+        }
+
+        .adv-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 3px 0;
+            font-size: 10px;
+            color: var(--muted2)
+        }
+
+        .adv-row .icon {
+            font-size: 13px;
+            flex-shrink: 0;
+            margin-top: 1px
+        }
+
+        .adv-row b {
+            color: var(--text)
+        }
+
+        /* loss bars */
+        .loss-section {
+            padding: 8px 0 0
+        }
+
+        .ls-title {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--muted2);
+            font-weight: 700;
+            margin-bottom: 7px;
+            font-family: 'Exo 2', sans-serif
+        }
+
+        .lbar-row {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 5px
+        }
+
+        .lbar-label {
+            font-size: 9px;
+            font-family: 'Share Tech Mono', monospace;
+            min-width: 72px;
+            color: var(--muted2)
+        }
+
+        .lbar-track {
+            flex: 1;
+            background: var(--bg);
+            border-radius: 2px;
+            height: 5px;
+            overflow: hidden
+        }
+
+        .lbar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width .6s cubic-bezier(.4, 0, .2, 1)
+        }
+
+        .lbar-pct {
+            font-size: 9px;
+            font-family: 'Share Tech Mono', monospace;
+            min-width: 30px;
+            text-align: right
+        }
+
+        /* ══ ROUTING TAB ══ */
+        .rtitle {
+            padding: 8px 13px 4px;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--muted2);
+            font-weight: 700;
+            flex-shrink: 0;
+            font-family: 'Exo 2', sans-serif;
+        }
+
+        .cost-list {
+            flex-shrink: 0;
+            max-height: 185px;
+            overflow-y: auto;
+            scrollbar-width: thin
+        }
+
+        .ci {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 13px;
+            border-bottom: 1px solid var(--border);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            color: var(--text);
+        }
+
+        .ci.best {
+            background: rgba(32, 192, 96, .07);
+            color: var(--green)
+        }
+
+        .ci.dead {
+            background: rgba(240, 64, 64, .07);
+            color: var(--red)
+        }
+
+        .ci.bl {
+            background: rgba(240, 64, 64, .05);
+            color: rgba(240, 64, 64, .5)
+        }
+
+        .ctag {
+            font-size: 8px;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: 700;
+            font-family: 'Exo 2', sans-serif;
+            letter-spacing: .5px
+        }
+
+        .ctag.t {
+            background: var(--violet-a);
+            color: var(--violet)
+        }
+
+        .ctag.e {
+            background: var(--green-a);
+            color: var(--green)
+        }
+
+        .ctag.q {
+            background: var(--gold-a);
+            color: var(--gold)
+        }
+
+        .ctag.x {
+            background: var(--red-a);
+            color: var(--red)
+        }
+
+        .ctag.m {
+            background: var(--cyan-a);
+            color: var(--cyan)
+        }
+
+        .ctag.etx {
+            background: rgba(255, 152, 0, .12);
+            color: var(--amber)
+        }
+
+        .ctag.mrhof {
+            background: var(--teal-a);
+            color: var(--teal)
+        }
+
+        .elog {
+            overflow-y: auto;
+            flex: 1;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent
+        }
+
+        .le {
+            padding: 4px 13px;
+            border-bottom: 1px solid rgba(25, 35, 56, .4);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            line-height: 1.5;
+            animation: fadein .2s;
+        }
+
+        .le .t {
+            color: var(--muted)
+        }
+
+        .le.fail {
+            color: var(--red)
+        }
+
+        .le.crit {
+            color: #f07070
+        }
+
+        .le.std {
+            color: var(--yellow)
+        }
+
+        .le.bulk {
+            color: var(--blue)
+        }
+
+        .le.gold {
+            color: var(--gold)
+        }
+
+        .le.sys {
+            color: var(--cyan)
+        }
+
+        .le.trust {
+            color: var(--violet)
+        }
+
+        .le.mrhof {
+            color: var(--teal)
+        }
+
+        /* ══ DEEP DIVE ══ */
+        .deep {
+            overflow-y: auto;
+            flex: 1;
+            padding: 11px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent
+        }
+
+        .rb {
+            border-radius: 7px;
+            padding: 12px;
+            margin-bottom: 9px;
+            border: 1px solid var(--border);
+            background: var(--surface2)
+        }
+
+        .rb h4 {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            margin-bottom: 7px;
+            font-family: 'Exo 2', sans-serif
+        }
+
+        .rb h4.cyan {
+            color: var(--cyan)
+        }
+
+        .rb h4.gold {
+            color: var(--gold)
+        }
+
+        .rb h4.violet {
+            color: var(--violet)
+        }
+
+        .rb h4.green {
+            color: var(--green)
+        }
+
+        .rb h4.red {
+            color: var(--red)
+        }
+
+        .rb h4.teal {
+            color: var(--teal)
+        }
+
+        .rb p {
+            font-size: 11px;
+            color: #6a8aaf;
+            line-height: 1.65;
+            font-family: 'Rajdhani', sans-serif
+        }
+
+        .rb .cite {
+            font-size: 9px;
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--muted);
+            margin-top: 7px;
+            padding-top: 7px;
+            border-top: 1px solid var(--border)
+        }
+
+        .chip {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .8px;
+            margin: 2px;
+            font-family: 'Exo 2', sans-serif
+        }
+
+        .chip.etx {
+            background: var(--cyan-a);
+            color: var(--cyan)
+        }
+
+        .chip.re {
+            background: var(--green-a);
+            color: var(--green)
+        }
+
+        .chip.tr {
+            background: var(--violet-a);
+            color: var(--violet)
+        }
+
+        .chip.qos {
+            background: var(--gold-a);
+            color: var(--gold)
+        }
+
+        .chip.mrhof {
+            background: var(--teal-a);
+            color: var(--teal)
+        }
+
+        .chip.hyp {
+            background: rgba(255, 152, 0, .12);
+            color: var(--amber)
+        }
+
+        .code-box {
+            background: var(--bg);
+            border-radius: 5px;
+            padding: 9px;
+            margin-top: 6px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            color: var(--cyan);
+            line-height: 1.75;
+            border: 1px solid var(--border);
+        }
+
+        .formula-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 8px;
+            background: var(--bg);
+            border-radius: 4px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            margin-bottom: 3px;
+        }
+
+        .delta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 7px
+        }
+
+        .dg-cell {
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg)
+        }
+
+        .dg-cell .dg-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            font-family: 'Exo 2', sans-serif
+        }
+
+        .dg-cell .dg-val {
+            font-size: 10px;
+            color: #6a8aaf;
+            line-height: 1.5;
+            font-family: 'Rajdhani', sans-serif
+        }
+
+        /* canvas legend */
+        .legend {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 10;
+            background: rgba(6, 9, 16, .9);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 8px 12px;
+            font-size: 10px;
+            backdrop-filter: blur(8px);
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .legend-title {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted2);
+            margin-bottom: 6px;
+            font-size: 9px;
+            font-family: 'Exo 2', sans-serif
+        }
+
+        .lg-row {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 3px
+        }
+
+        .lg-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0
+        }
+
+        /* ══ CONTROLS ══ */
+        .controls {
+            grid-column: 1/-1;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 20px;
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .controls::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border2), transparent);
+        }
+
+        .btn {
+            padding: 7px 16px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            font-family: 'Exo 2', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .15s;
+            letter-spacing: .8px;
+            white-space: nowrap;
+            text-transform: uppercase;
+        }
+
+        .btn:active {
+            transform: scale(.95)
+        }
+
+        .btn-play {
+            background: var(--blue-a);
+            color: var(--blue);
+            border-color: rgba(40, 120, 240, .4)
+        }
+
+        .btn-play:hover {
+            background: var(--blue);
+            color: #fff
+        }
+
+        .btn-pause {
+            background: var(--yellow-a);
+            color: var(--yellow);
+            border-color: rgba(232, 184, 32, .4)
+        }
+
+        .btn-reset {
+            background: transparent;
+            color: var(--muted2)
+        }
+
+        .btn-reset:hover {
+            color: var(--text)
+        }
+
+        .btn-crit {
+            background: var(--red-a);
+            color: var(--red);
+            border-color: rgba(240, 64, 64, .4);
+            font-size: 11px;
+            padding: 6px 12px
+        }
+
+        .btn-atk {
+            background: var(--violet-a);
+            color: var(--violet);
+            border-color: rgba(144, 64, 240, .4);
+            font-size: 11px;
+            padding: 6px 12px
+        }
+
+        .btn-bulk {
+            background: var(--blue-a);
+            color: var(--blue);
+            border-color: rgba(40, 120, 240, .4);
+            font-size: 11px;
+            padding: 6px 12px
+        }
+
+        .btn-v4 {
+            background: linear-gradient(135deg, rgba(8, 200, 232, .15), rgba(248, 192, 48, .15));
+            color: var(--gold);
+            border-color: rgba(248, 192, 48, .4);
+            font-size: 11px;
+            padding: 6px 12px;
+        }
+
+        .spd {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto
+        }
+
+        .spd label {
+            font-size: 9px;
+            color: var(--muted2);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: 'Exo 2', sans-serif
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 90px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            outline: none
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--cyan);
+            cursor: pointer;
+            box-shadow: 0 0 6px rgba(8, 200, 232, .5)
+        }
+
+        .sv {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+            min-width: 26px
+        }
+
+        /* ETX Ring (MRHOF visual) */
+        .etx-ring {
+            stroke-dasharray: 4 3;
+            animation: spin 8s linear infinite
+        }
+
+        @keyframes spin {
+            from {
+                transform-origin: center;
+                transform: rotate(0deg)
+            }
+
+            to {
+                transform-origin: center;
+                transform: rotate(360deg)
+            }
+        }
+
+        @keyframes fadein {
+            from {
+                opacity: 0;
+                transform: translateY(2px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+
+        <div class="hdr">
+            <div style="display:flex;align-items:center;gap:14px">
+                <div class="logo"><em>PCER-T</em> v4<small>Adaptive Hybrid IoT Routing · Final</small></div>
+                <div class="status-chip">
+                    <div class="pulse-dot" id="pulseDot"></div>
+                    <span id="simStatus">IDLE</span>
+                </div>
+            </div>
+            <div class="proto-bar" id="protoBar">
+                <button class="pb pa-baseline" data-m="baseline">OSPF Baseline</button>
+                <button class="pb" data-m="rpl">RPL-MRHOF+Trust</button>
+                <button class="pb" data-m="pcertv3">PCER-T v3</button>
+                <button class="pb" data-m="pcertv4">★ PCER-T v4 HYBRID</button>
+            </div>
+        </div>
+
+        <div class="canvas-area" id="canvasArea">
+            <div class="cgrid"></div>
+            <canvas id="nc"></canvas>
+            <div class="legend" id="legend" style="display:none">
+                <div class="legend-title">Trust · ETX · Energy (v4 Hybrid)</div>
+                <div class="lg-row">
+                    <div class="lg-dot" style="background:#20c060"></div><span style="color:#6a8aaf">Trust ≥0.7 · Low
+                        ETX · Healthy</span>
+                </div>
+                <div class="lg-row">
+                    <div class="lg-dot" style="background:#e8b820"></div><span style="color:#6a8aaf">Trust 0.4–0.7 ·
+                        Medium ETX</span>
+                </div>
+                <div class="lg-row">
+                    <div class="lg-dot" style="background:#f04040"></div><span style="color:#6a8aaf">Trust &lt;0.4 ·
+                        High ETX — penalised</span>
+                </div>
+                <div class="lg-row">
+                    <div class="lg-dot" style="background:#08c8e8"></div><span style="color:#6a8aaf">★ MRHOF-ETX
+                        preferred hop</span>
+                </div>
+                <div class="lg-row">
+                    <div class="lg-dot" style="background:#f8c030"></div><span style="color:#6a8aaf">⚖ Load-balanced alt
+                        path</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="sb-tabs">
+                <div class="sbt on" data-tab="dash">Dashboard</div>
+                <div class="sbt" data-tab="routing">Routing</div>
+                <div class="sbt" data-tab="deep">Deep Dive</div>
+            </div>
+
+            <!-- DASHBOARD TAB -->
+            <div class="sbp on" id="tabDash">
+                <div class="dash">
+
+                    <div class="adv-box" id="advBox" style="display:none">
+                        <div class="adv-title">★ PCER-T v4 — MRHOF Hybrid Advantages</div>
+                        <div class="adv-row"><span class="icon">📡</span>
+                            <div><b>MRHOF-ETX Link Quality:</b> RPL's ETX metric embedded into hop selection — avoids
+                                poor links even with good energy</div>
+                        </div>
+                        <div class="adv-row"><span class="icon">🔄</span>
+                            <div><b>Adaptive Hysteresis:</b> Route stability via RPL's MIN_IMPROVEMENT dampening —
+                                prevents route flapping under noise</div>
+                        </div>
+                        <div class="adv-row"><span class="icon">🏷️</span>
+                            <div><b>QoS Tag Blends:</b> Fractional weights per traffic class — Critical speed-first,
+                                Bulk energy-first, ETX always active</div>
+                        </div>
+                        <div class="adv-row"><span class="icon">🔒</span>
+                            <div><b>Dual Trust Guard:</b> PDR-based blacklisting + ETX trust penalty compound together
+                                for chronic droppers</div>
+                        </div>
+                        <div class="adv-row"><span class="icon">⚡</span>
+                            <div><b>Graduated Energy Floor:</b> Cubic demotion at 8%, hard block at 3% — smooth
+                                degradation, no sudden flaps</div>
+                        </div>
+                        <div class="adv-row"><span class="icon">⚖️</span>
+                            <div><b>Load-Aware Tie-Breaking:</b> Equal-cost paths resolved by forwarding history +
+                                hysteresis band</div>
+                        </div>
+                    </div>
+
+                    <div class="scard s-baseline" id="cBaseline">
+                        <div class="sc-head">
+                            <div class="sc-name" style="color:var(--red)">OSPF Baseline</div>
+                            <div class="badge b-baseline" id="bBaseline">ACTIVE</div>
+                        </div>
+                        <div class="mg">
+                            <div class="met">
+                                <div class="lbl">Avg Latency</div>
+                                <div class="v" id="mBLat">0ms</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Delivered</div>
+                                <div class="v green" id="mBDlv">0</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Lost</div>
+                                <div class="v red" id="mBLost">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="scard s-rpl" id="cRpl" style="opacity:.4">
+                        <div class="sc-head">
+                            <div class="sc-name" style="color:var(--violet)">RPL-MRHOF+Trust</div>
+                            <div class="badge b-rpl" id="bRpl">ACTIVE</div>
+                        </div>
+                        <div class="mg">
+                            <div class="met">
+                                <div class="lbl">Avg Latency</div>
+                                <div class="v violet" id="mRLat">0ms</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Delivered</div>
+                                <div class="v green" id="mRDlv">0</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Lost</div>
+                                <div class="v red" id="mRLost">0</div>
+                            </div>
+                        </div>
+                        <div class="sub-mg mg">
+                            <div class="met">
+                                <div class="lbl">Avg Trust</div>
+                                <div class="v violet" id="mRTrust">—</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Blacklisted</div>
+                                <div class="v red" id="mRBL">0</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">PDR</div>
+                                <div class="v green" id="mRPdr">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="scard s-pcertv3" id="cPcertv3" style="opacity:.4">
+                        <div class="sc-head">
+                            <div class="sc-name" style="color:var(--yellow)">PCER-T v3</div>
+                            <div class="badge b-pcertv3" id="bPcertv3">ACTIVE</div>
+                        </div>
+                        <div class="mg">
+                            <div class="met">
+                                <div class="lbl">Avg Latency</div>
+                                <div class="v gold" id="mV3Lat">0ms</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Delivered</div>
+                                <div class="v green" id="mV3Dlv">0</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Lost</div>
+                                <div class="v red" id="mV3Lost">0</div>
+                            </div>
+                        </div>
+                        <div class="sub-mg mg">
+                            <div class="met">
+                                <div class="lbl">Crit Latency</div>
+                                <div class="v gold" id="mV3CritLat">0ms</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">PDR</div>
+                                <div class="v green" id="mV3Pdr">—</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">LB Events</div>
+                                <div class="v gold" id="mV3LB">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="scard s-pcertv4" id="cPcertv4" style="opacity:.4">
+                        <div class="sc-head">
+                            <div class="sc-name" style="color:var(--gold)">★ PCER-T v4 Hybrid</div>
+                            <div class="badge b-pcertv4" id="bPcertv4">ACTIVE</div>
+                        </div>
+                        <div class="mg">
+                            <div class="met">
+                                <div class="lbl">Avg Latency</div>
+                                <div class="v cyan" id="mV4Lat">0ms</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Delivered</div>
+                                <div class="v green" id="mV4Dlv">0</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Lost</div>
+                                <div class="v red" id="mV4Lost">0</div>
+                            </div>
+                        </div>
+                        <div class="sub-mg mg">
+                            <div class="met">
+                                <div class="lbl">Crit Latency</div>
+                                <div class="v cyan" id="mV4CritLat">0ms</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">PDR</div>
+                                <div class="v green" id="mV4Pdr">—</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Route Stab</div>
+                                <div class="v cyan" id="mV4Stab">—</div>
+                            </div>
+                        </div>
+                        <div class="sub-mg mg">
+                            <div class="met">
+                                <div class="lbl">ETX Saves</div>
+                                <div class="v cyan" id="mV4ETX">0</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Hyst Blocks</div>
+                                <div class="v gold" id="mV4Hyst">0</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">LB Events</div>
+                                <div class="v gold" id="mV4LB">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="loss-section">
+                        <div class="ls-title">Packet Loss Rate</div>
+                        <div id="lb0" class="lbar-row"></div>
+                        <div id="lb1" class="lbar-row"></div>
+                        <div id="lb2" class="lbar-row"></div>
+                        <div id="lb3" class="lbar-row"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROUTING TAB -->
+            <div class="sbp" id="tabRouting">
+                <div class="rtitle">Last Packet — Candidate Hop Cost Breakdown</div>
+                <div class="cost-list" id="costList">
+                    <div
+                        style="padding:14px;color:var(--muted2);font-size:11px;font-style:italic;font-family:'Rajdhani',sans-serif">
+                        Waiting for first packet...</div>
+                </div>
+                <div class="rtitle" style="margin-top:2px">Event Log</div>
+                <div class="elog" id="elog"></div>
+            </div>
+
+            <!-- DEEP DIVE TAB -->
+            <div class="sbp" id="tabDeep">
+                <div class="deep">
+
+                    <div class="rb">
+                        <h4 class="gold">PCER-T v4 — What Changed from v3?</h4>
+                        <p>v4 takes the three strongest capabilities from RPL-MRHOF+Trust and grafts them surgically
+                            into PCER-T's QoS framework. The result is a hybrid that retains full QoS tag-awareness
+                            while gaining RPL's proven link-quality intelligence:</p>
+                        <div style="margin-top:8px">
+                            <span class="chip mrhof">MRHOF ETX Link Metric</span>
+                            <span class="chip mrhof">Adaptive Hysteresis</span>
+                            <span class="chip tr">Dual Trust Compound</span>
+                            <span class="chip qos">Fractional QoS Tags</span>
+                            <span class="chip re">Cubic Energy Floor</span>
+                            <span class="chip hyp">Load-Aware Tie-Break</span>
+                        </div>
+                        <div class="cite">Imports: RFC 6552 MRHOF ETX | RPL MIN_IMPROVEMENT | RSOF NFR blacklist |
+                            BLET-IoT energy floor | T-OF load balance</div>
+                    </div>
+
+                    <div class="rb">
+                        <h4 class="teal">The 3 RPL-MRHOF Ingredients Borrowed</h4>
+                        <div class="delta-grid">
+                            <div class="dg-cell">
+                                <div class="dg-label" style="color:var(--teal)">① MRHOF ETX</div>
+                                <div class="dg-val">RPL's Expected Transmission Count estimates how many attempts a link
+                                    needs. v4 normalises this as a soft link-quality cost added to every hop evaluation
+                                    — even Critical packets avoid flaky links if ETX is very poor.</div>
+                            </div>
+                            <div class="dg-cell">
+                                <div class="dg-label" style="color:var(--teal)">② Hysteresis Band</div>
+                                <div class="dg-val">RPL's MIN_IMPROVEMENT: a new route must beat the current preferred
+                                    parent by ≥15% before PCER-T switches. This prevents oscillation when two hops
+                                    alternate between near-equal costs under link noise.</div>
+                            </div>
+                            <div class="dg-cell">
+                                <div class="dg-label" style="color:var(--violet)">③ Dual Trust Compound</div>
+                                <div class="dg-val">RPL-MRHOF+Trust compounds ETX and trust. v4 does the same: a node's
+                                    ETX penalty is amplified by (1−trust), so a low-trust node also pays a higher
+                                    link-quality price — double punishment for chronic droppers.</div>
+                            </div>
+                            <div class="dg-cell">
+                                <div class="dg-label" style="color:var(--gold)">v3 Retained</div>
+                                <div class="dg-val">All v3 innovations kept: fractional QoS weights, cubic energy
+                                    demotion at 8%, hard block at 3%, soft ETX penalty for trust 0.4–0.7, load-balancing
+                                    tie-break by forwarding history.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rb">
+                        <h4 class="gold">PCER-T v4 Cost Function</h4>
+                        <div class="code-box">
+                            <span style="color:var(--muted2)">// ══ HARD GUARDS (→ ∞) ══</span><br>
+                            IF nfr_blacklisted(v) AND v ≠ DST → ∞<br>
+                            IF battery(v) &lt; 3% AND v ≠ DST → ∞<br><br>
+                            <span style="color:var(--muted2)">// ══ MRHOF ETX (Borrowed from RPL) ══</span><br>
+                            etx(v) = simulated_link_quality(u,v) <span style="color:var(--muted2)">//
+                                1.0=perfect</span><br>
+                            etx_penalty = (etx(v) − 1.0) × 12 <span style="color:var(--muted2)">// 0 if
+                                perfect</span><br><br>
+                            <span style="color:var(--muted2)">// ══ DUAL TRUST COMPOUND (RPL × PCER-T) ══</span><br>
+                            tr = trust(v) <span style="color:var(--muted2)">// 0..1</span><br>
+                            trust_base = (1 − tr) × 20 <span style="color:var(--muted2)">// base penalty</span><br>
+                            etx_x_trust = etx_penalty × (1 − tr) <span style="color:var(--muted2)">//
+                                compound!</span><br><br>
+                            <span style="color:var(--muted2)">// ══ CUBIC ENERGY FLOOR (v3 retained) ══</span><br>
+                            bat = battery(v)<br>
+                            IF bat &lt; 8% AND v ≠ DST:<br>
+                            e_penalty = (0.08/bat)³ × 100 <span style="color:var(--muted2)">// cubic</span><br>
+                            ELSE:<br>
+                            e_penalty = (1/bat) × 2 <span style="color:var(--muted2)">// normal</span><br><br>
+                            <span style="color:var(--muted2)">// ══ QoS TAG-ADAPTIVE WEIGHTS ══</span><br>
+                            w = {CRIT:[wd=0.70,we=0.08,wt=0.14,wetx=0.06,wl=0.02]<br>
+                            STD :[wd=0.38,we=0.30,wt=0.18,wetx=0.08,wl=0.06]<br>
+                            BULK:[wd=0.04,we=0.60,wt=0.20,wetx=0.10,wl=0.06]}<br><br>
+                            <span style="color:var(--muted2)">// ══ FINAL COST ══</span><br>
+                            delay_cost = (edge_ms + h_dist) × w.wd<br>
+                            energy_cost = e_penalty × w.we<br>
+                            trust_cost = trust_base × w.wt<br>
+                            etx_cost = (etx_penalty + etx_x_trust) × w.wetx<br>
+                            lb_cost = load_count(v) × 0.7 × w.wl<br><br>
+                            <span style="color:var(--gold)">raw_cost = delay+energy+trust+etx+lb costs</span><br><br>
+                            <span style="color:var(--muted2)">// ══ HYSTERESIS GUARD (Borrowed from RPL) ══</span><br>
+                            IF prev_best exists AND raw_cost &lt; prev_best:<br>
+                            IF improvement &lt; 15% → keep prev_best<br>
+                            ELSE → switch to new, log MRHOF-switch<br><br>
+                            <span style="color:var(--cyan)">FINAL COST = raw_cost (after hysteresis)</span>
+                        </div>
+                    </div>
+
+                    <div class="rb">
+                        <h4 class="green">Evolution: Trad → Proposed → v3 → v4</h4>
+                        <div class="formula-row"><span style="color:var(--yellow)">Trad. PCER</span><span
+                                style="color:var(--muted2)">w1×delay + w2×(1/bat) [static weights]</span></div>
+                        <div class="formula-row"><span style="color:var(--green)">Prop. PCER</span><span
+                                style="color:var(--muted2)">binary tag-weights + hard 5% floor</span></div>
+                        <div class="formula-row"><span style="color:var(--yellow)">PCER-T v3</span><span
+                                style="color:var(--muted2)">fractional tags + trust NFR + cubic floor + LB</span></div>
+                        <div class="formula-row"
+                            style="background:rgba(8,200,232,.07);border:1px solid rgba(8,200,232,.2)">
+                            <span style="color:var(--cyan)">PCER-T v4 ★</span>
+                            <span style="color:var(--text)">v3 + MRHOF-ETX + Hysteresis + Dual Trust Compound</span>
+                        </div>
+                        <div class="cite">v4 is a strict superset of v3 — all v3 advantages retained, three RPL-MRHOF
+                            mechanics added</div>
+                    </div>
+
+                    <div class="rb">
+                        <h4 class="red">Limitations & Future Work</h4>
+                        <p>PCER-T v4 still omits: full DIO trickle timer management, TSCH slot scheduling, cryptographic
+                            node authentication, and topology-level repair when DAG roots fail. ETX in this simulation
+                            is probabilistic, not measured from real radio. These remain open research directions for
+                            constrained 6LoWPAN deployments.</p>
+                        <div class="cite">Ref: RFC 6550 DIO trickle | 6TiSCH TSCH | RPL-BlockTrust 2025 |
+                            Cooja/ContikiNG measurement</div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-play" id="btnPlay">▶ Start</button>
+            <button class="btn btn-pause" id="btnPause" style="display:none">⏸ Pause</button>
+            <button class="btn btn-reset" id="btnReset">↺ Reset</button>
+            <button class="btn btn-crit" id="btnCrit">🚨 Inject Critical</button>
+            <button class="btn btn-atk" id="btnAtk">⚠️ Degrade Node</button>
+            <button class="btn btn-bulk" id="btnBulk">📦 Inject Bulk</button>
+            <button class="btn btn-v4" id="btnDegrade">📡 Degrade Link ETX</button>
+            <div class="spd">
+                <label>Speed</label>
+                <input type="range" id="spdSlider" min="1" max="4" step="1" value="2">
+                <span class="sv" id="spdVal">1×</span>
+            </div>
+        </div>
+
+    </div>
+    <script>
+        // ═══════════════════════════════════════════════════════════════
+        // PCER-T v4 — RPL-MRHOF Hybrid Simulation
+        // Protocols: baseline | rpl | pcertv3 | pcertv4
+        // New in v4: MRHOF-ETX metric, Adaptive Hysteresis, Dual Trust Compound
+        // ═══════════════════════════════════════════════════════════════
+
+        const PROTONAMES = {
+            baseline: 'OSPF Baseline',
+            rpl: 'RPL-MRHOF+Trust',
+            pcertv3: 'PCER-T v3',
+            pcertv4: 'PCER-T v4 Hybrid'
+        };
+        const TAG_NAMES = ['Critical', 'Standard', 'Bulk'];
+        const TAG_COLORS = ['#f04040', '#e8b820', '#2878f0'];
+        const TAG_CLS = ['crit', 'std', 'bulk'];
+        const DEST = 17;
+
+        // MIN_IMPROVEMENT for hysteresis (15%) — borrowed from RFC 6552 MRHOF
+        const MRHOF_MIN_IMPROVE = 0.15;
+        // Soft/hard battery thresholds
+        const BAT_HARD = 0.03;
+        const BAT_SOFT = 0.08;
+        // Trust thresholds
+        const TRUST_HARD = 0.30;
+        const TRUST_SOFT = 0.50;
+
+        // ── Node definitions ──────────────────────────────────────────
+        const nodeDefs = [
+            { id: 0, label: 'Router', icon: '🌐', type: 'mains', initBat: 1.0 },
+            { id: 1, label: 'Smart TV', icon: '📺', type: 'mains', initBat: 1.0 },
+            { id: 2, label: 'Security Cam', icon: '📷', type: 'fast', initBat: 0.20 },
+            { id: 3, label: 'Smoke Alarm', icon: '🚨', type: 'med', initBat: 0.8 },
+            { id: 4, label: 'Laptop', icon: '💻', type: 'mains', initBat: 1.0 },
+            { id: 5, label: 'Thermostat', icon: '🌡️', type: 'med', initBat: 0.3 },
+            { id: 6, label: 'Fridge', icon: '🧊', type: 'mains', initBat: 1.0 },
+            { id: 7, label: 'Doorbell', icon: '🚪', type: 'med', initBat: 0.4 },
+            { id: 8, label: 'Smart Watch', icon: '⌚', type: 'fast', initBat: 0.15 },
+            { id: 9, label: 'Light Bulb', icon: '💡', type: 'mains', initBat: 1.0 },
+            { id: 10, label: 'Heart Mon.', icon: '🫀', type: 'fast', initBat: 0.6 },
+            { id: 11, label: 'AC Unit', icon: '❄️', type: 'mains', initBat: 1.0 },
+            { id: 12, label: 'Oven', icon: '♨️', type: 'mains', initBat: 1.0 },
+            { id: 13, label: 'Tablet', icon: '📱', type: 'med', initBat: 0.5 },
+            { id: 14, label: 'Speaker', icon: '🔊', type: 'mains', initBat: 1.0 },
+            { id: 15, label: 'Drone', icon: '🚁', type: 'fast', initBat: 0.25 },
+            { id: 16, label: 'Sensor', icon: '📡', type: 'med', initBat: 0.7 },
+            { id: 17, label: 'Cloud', icon: '☁️', type: 'mains', initBat: 1.0 },
+        ];
+
+        const edges = [
+            [0, 1, 10], [0, 2, 5], [0, 3, 15], [0, 4, 20],
+            [1, 5, 15], [2, 6, 10], [3, 7, 20], [4, 8, 15],
+            [5, 9, 20], [6, 10, 15], [7, 11, 10], [8, 12, 5],
+            [9, 13, 10], [10, 14, 20], [11, 15, 5], [12, 16, 10],
+            [13, 17, 20], [14, 17, 15], [15, 17, 10], [16, 17, 25],
+            [1, 2, 5], [2, 3, 10], [5, 6, 10], [7, 8, 10],
+            [9, 10, 5], [11, 12, 5], [13, 14, 10], [15, 16, 5],
+            [10, 13, 15], [11, 16, 10], [6, 9, 25], [3, 8, 5]
+        ];
+
+        // Build adjacency + edge map
+        const adj = {}, edgeMap = {};
+        edges.forEach(([u, v, d]) => {
+            if (!adj[u]) adj[u] = []; if (!adj[v]) adj[v] = [];
+            adj[u].push({ node: v, delay: d }); adj[v].push({ node: u, delay: d });
+            edgeMap[`${u}_${v}`] = d; edgeMap[`${v}_${u}`] = d;
+        });
+
+        // Hop-distance to DEST (Bellman-Ford)
+        const hDist = Object.fromEntries(Array.from({ length: 18 }, (_, i) => [i, 10000]));
+        hDist[DEST] = 0;
+        for (let pass = 0; pass < 17; pass++) {
+            for (const [u, w, d] of edges) {
+                if (hDist[w] + d < hDist[u]) hDist[u] = hDist[w] + d;
+                if (hDist[u] + d < hDist[w]) hDist[w] = hDist[u] + d;
+            }
+        }
+        function edgeDelay(u, v) { return edgeMap[`${u}_${v}`] || 999 }
+
+        // ── Global State ──────────────────────────────────────────────
+        let nodes = [], packets = [];
+        let simTime = 0, playing = false, speed = 1, proto = 'baseline';
+        let nextSpawn = 0, lastFrame = 0;
+
+        // Shared trust state
+        let trust = {}, fhist = {}, blacklist = new Set(), loadCount = {};
+
+        // ETX per edge — v4: each edge gets a quality score (1.0=perfect, >1 = retransmissions needed)
+        // This is the MRHOF innovation imported into PCER-T v4
+        let etxMap = {};           // "u_v" → ETX value
+        let prevBestHop = {};      // source-node → nodeId (hysteresis memory)
+        let hysteresisBlocks = 0;  // times hysteresis prevented a switch
+
+        const stats = {
+            baseline: { latSum: 0, cnt: 0, lost: 0 },
+            rpl: { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0 },
+            pcertv3: { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0 },
+            pcertv4: { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0 },
+        };
+
+        let canvas, ctx, W, H;
+        let highlightNode = -1;
+        let etxHighlightEdge = null; // [u,v] — shows which edge had ETX affect routing
+
+        function initAll() {
+            nodes = nodeDefs.map(d => ({ ...d, battery: d.initBat, dead: false }));
+            trust = {}; fhist = {}; blacklist.clear(); loadCount = {};
+            etxMap = {}; prevBestHop = {}; hysteresisBlocks = 0;
+            for (let i = 0; i < 18; i++) {
+                trust[i] = 0.70 + Math.random() * 0.30;
+                fhist[i] = { recv: 12, fwd: 12 };
+                loadCount[i] = 0;
+            }
+            // Initialise ETX for each edge (1.0 = perfect link quality)
+            edges.forEach(([u, v]) => {
+                const etx = 1.0 + Math.random() * 0.3; // start mostly healthy
+                etxMap[`${u}_${v}`] = etx;
+                etxMap[`${v}_${u}`] = etx;
+            });
+            highlightNode = -1;
+            etxHighlightEdge = null;
+            calcPos();
+        }
+
+        function calcPos() {
+            if (!W) return;
+            const px = Math.min(90, W * .09), wA = W - px * 2, hA = Math.min(H * .83, 560);
+            const layout = {
+                0: [0, .5], 1: [1, .13], 2: [1, .38], 3: [1, .63], 4: [1, .88],
+                5: [2, .08], 6: [2, .33], 7: [2, .58], 8: [2, .83],
+                9: [3, .13], 10: [3, .38], 11: [3, .63], 12: [3, .88],
+                13: [4, .08], 14: [4, .33], 15: [4, .58], 16: [4, .83], 17: [5, .5]
+            };
+            nodes.forEach(n => { const l = layout[n.id]; n.x = px + (l[0] / 5) * wA; n.y = (H - hA) / 2 + l[1] * hA; });
+        }
+
+        // ── Trust engine ──────────────────────────────────────────────
+        function calcTrust(id) {
+            const h = fhist[id], pdr = h.recv > 0 ? h.fwd / h.recv : 1;
+            const bat = nodes[id].battery;
+            const ls = 0.55 + Math.random() * 0.45;
+            const t = Math.max(0, Math.min(1, 0.50 * pdr + 0.28 * bat + 0.22 * ls));
+            trust[id] = t;
+            const wasbl = blacklist.has(id);
+            if (t < TRUST_HARD && id !== DEST) {
+                blacklist.add(id);
+                if (!wasbl) log(`⛔ Node ${id} (${nodes[id].label}) blacklisted trust=${t.toFixed(2)}`, 'trust');
+            } else blacklist.delete(id);
+            return t;
+        }
+        function degradeTrust(id) { fhist[id].recv += 12; fhist[id].fwd += 2; calcTrust(id); }
+        function randomDegradeNode() {
+            const candidates = [2, 3, 5, 7, 8, 10, 13, 15, 16].filter(i => !nodes[i].dead);
+            if (!candidates.length) return;
+            const pick = candidates[Math.floor(Math.random() * candidates.length)];
+            degradeTrust(pick);
+            log(`⚠️ Node ${pick} (${nodes[pick].label}) trust attack → ${trust[pick].toFixed(2)}`, 'trust');
+        }
+
+        // ── ETX perturbation — v4 feature ────────────────────────────
+        // Degrades a random edge ETX, simulating radio interference
+        function degradeRandomLinkETX() {
+            const idx = Math.floor(Math.random() * edges.length);
+            const [u, v] = edges[idx];
+            const delta = 0.4 + Math.random() * 0.8;
+            etxMap[`${u}_${v}`] = Math.min(3.5, etxMap[`${u}_${v}`] + delta);
+            etxMap[`${v}_${u}`] = etxMap[`${u}_${v}`];
+            etxHighlightEdge = [u, v];
+            log(`📡 ETX degraded on link ${u}↔${v} → ETX=${etxMap[`${u}_${v}`].toFixed(2)}`, 'mrhof');
+        }
+
+        // Slowly recover ETX each tick
+        function etxRecovery(dt) {
+            edges.forEach(([u, v]) => {
+                const k = `${u}_${v}`;
+                if (etxMap[k] > 1.0) {
+                    etxMap[k] = Math.max(1.0, etxMap[k] - 0.05 * dt);
+                    etxMap[`${v}_${u}`] = etxMap[k];
+                }
+            });
+        }
+
+        function getETX(u, v) { return etxMap[`${u}_${v}`] || 1.0 }
+
+        // ── Cost Functions ────────────────────────────────────────────
+
+        // PCER-T v4 — MRHOF Hybrid (the new final protocol)
+        // Key additions vs v3:
+        //   1. MRHOF-ETX: link quality cost based on expected transmissions
+        //   2. Dual Trust Compound: ETX penalty amplified by (1−trust)
+        //   3. Hysteresis band: MIN_IMPROVEMENT before switching preferred parent
+        const V4_WEIGHTS = {
+            0: { wd: 0.70, we: 0.08, wt: 0.14, wetx: 0.06, wl: 0.02 }, // Critical: speed dominant
+            1: { wd: 0.38, we: 0.30, wt: 0.18, wetx: 0.08, wl: 0.06 }, // Standard: balanced
+            2: { wd: 0.04, we: 0.60, wt: 0.20, wetx: 0.10, wl: 0.06 }, // Bulk: energy dominant
+        };
+
+        function costV4(tag, src, u, vn) {
+            // Hard guards
+            if (blacklist.has(vn.id) && vn.id !== DEST) return Infinity;
+            if (vn.battery < BAT_HARD && vn.id !== DEST) return Infinity;
+
+            const edD = edgeDelay(u, vn.id);
+            const totalDelay = edD + hDist[vn.id];
+            const bat = vn.battery;
+            const tr = trust[vn.id] ?? 0.7;
+            const w = V4_WEIGHTS[tag];
+
+            // ① MRHOF-ETX: normalised link quality penalty
+            const etx = getETX(u, vn.id);
+            const etxPenalty = Math.max(0, (etx - 1.0) * 12); // 0 for perfect, grows with retransmissions
+
+            // ② Dual Trust Compound: ETX and trust amplify each other
+            // Borrowed from RPL-MRHOF+Trust compound objective function
+            const trustBase = (1 - tr) * 20;
+            const etxTrustCompound = etxPenalty * (1 - tr); // double-penalty for bad-link + low-trust
+
+            // ③ Cubic energy floor (retained from v3)
+            let ePenalty;
+            if (bat < BAT_SOFT && vn.id !== DEST) {
+                ePenalty = Math.pow(BAT_SOFT / bat, 3) * 100;
+            } else {
+                ePenalty = bat > 0 ? (1 / bat) * 2 : 1000;
+            }
+
+            // Load balancing cost
+            const lbCost = (loadCount[vn.id] || 0) * 0.7;
+
+            // Weighted sub-costs
+            const delayCost = totalDelay * w.wd;
+            const energyCost = ePenalty * w.we;
+            const trustCost = trustBase * w.wt;
+            const etxCost = (etxPenalty + etxTrustCompound) * w.wetx;
+            const lCost = lbCost * w.wl;
+
+            return delayCost + energyCost + trustCost + etxCost + lCost;
+        }
+
+        // PCER-T v3 (unchanged from original)
+        const V3_WEIGHTS = {
+            0: { wd: 0.75, we: 0.10, wt: 0.12, wl: 0.03 },
+            1: { wd: 0.40, we: 0.35, wt: 0.18, wl: 0.07 },
+            2: { wd: 0.05, we: 0.65, wt: 0.22, wl: 0.08 },
+        };
+        function costV3(tag, u, vn) {
+            if (blacklist.has(vn.id) && vn.id !== DEST) return Infinity;
+            if (vn.battery < BAT_HARD && vn.id !== DEST) return Infinity;
+            const edD = edgeDelay(u, vn.id), totalDelay = edD + hDist[vn.id];
+            const bat = vn.battery, tr = trust[vn.id] ?? 0.7, w = V3_WEIGHTS[tag];
+            const eBase = bat > 0 ? (1 / bat) * 2 : 1000;
+            const tBase = (1 - tr) * 20;
+            const lbCost = (loadCount[vn.id] || 0) * 0.8;
+            let emergencyEnergy = 0;
+            if (bat < BAT_SOFT && vn.id !== DEST) emergencyEnergy = Math.pow(BAT_SOFT / bat, 3) * 100;
+            let emergencyTrust = 0;
+            if (tr < TRUST_SOFT) emergencyTrust = Math.pow(TRUST_SOFT / tr, 2) * 80;
+            const delayCost = totalDelay * w.wd;
+            const energyCost = eBase * w.we;
+            const tCost = tBase * w.wt;
+            const lCost = lbCost * w.wl;
+            return delayCost + energyCost + tCost + lCost + emergencyEnergy + emergencyTrust;
+        }
+
+        function costRpl(u, vn) {
+            if (blacklist.has(vn.id) && vn.id !== DEST) return Infinity;
+            if (vn.battery < BAT_HARD && vn.id !== DEST) return Infinity;
+            const edD = edgeDelay(u, vn.id), re = vn.battery, tr = trust[vn.id] ?? 0.5;
+            const etxC = (edD / 5) * 10, rePenalty = re > 0 ? (1 / re) * 2 : 1000;
+            const trustPenalty = (1 - tr) * 50;
+            return 0.4 * etxC + 0.2 * rePenalty + 0.25 * trustPenalty + 0.15 * hDist[vn.id];
+        }
+        function costBaseline(u, vn) { return edgeDelay(u, vn.id) + hDist[vn.id]; }
+
+        function getCost(tag, src, u, vn) {
+            if (proto === 'baseline') return costBaseline(u, vn);
+            if (proto === 'rpl') return costRpl(u, vn);
+            if (proto === 'pcertv3') return costV3(tag, u, vn);
+            return costV4(tag, src, u, vn);
+        }
+
+        // ── Path finding ──────────────────────────────────────────────
+        function buildPath(tag) {
+            const srcs = [0, 1, 2, 5, 9, 13].filter(i => nodes[i].battery > 0);
+            if (!srcs.length) return null;
+            const src = srcs[Math.floor(Math.random() * srcs.length)];
+            const path = [src], visited = new Set([src]);
+            let cur = src, cost = 0, failReason = null, firstAnalysis = null;
+            let etxSaveOccurred = false;
+
+            while (cur !== DEST) {
+                const nbrs = adj[cur].map(a => a.node).filter(n => !visited.has(n));
+                const analysis = nbrs.map(nid => ({ id: nid, cost: getCost(tag, src, cur, nodes[nid]), etx: getETX(cur, nid) }));
+                if (cur === src) firstAnalysis = analysis;
+
+                analysis.sort((a, b) => a.cost - b.cost);
+                if (!analysis.length || analysis[0].cost === Infinity) { failReason = 'no_route'; break; }
+
+                let chosen = analysis[0].id;
+                let wasLB = false, wasHyst = false;
+
+                // PCER-T v4: hysteresis check — only switch if improvement ≥ MIN_IMPROVE
+                if (proto === 'pcertv4' && prevBestHop[cur] !== undefined) {
+                    const prevId = prevBestHop[cur];
+                    const prevCostEntry = analysis.find(a => a.id === prevId);
+                    const newBestEntry = analysis[0];
+                    if (prevCostEntry && prevCostEntry.cost < Infinity && newBestEntry.id !== prevId) {
+                        const improvement = (prevCostEntry.cost - newBestEntry.cost) / prevCostEntry.cost;
+                        if (improvement < MRHOF_MIN_IMPROVE) {
+                            // Hysteresis: stay with previous best, block the switch
+                            chosen = prevId; wasHyst = true; hysteresisBlocks++; stats.pcertv4.hystBlocks++;
+                        }
+                    }
+                }
+                prevBestHop[cur] = chosen;
+
+                // Load balancing for v3/v4: near-equal cost → prefer lower load
+                if ((proto === 'pcertv3' || proto === 'pcertv4') && !wasHyst && analysis.length >= 2) {
+                    const c0 = analysis[0].cost, c1 = analysis[1].cost;
+                    if (c1 < Infinity && (c1 - c0) / c0 < 0.05) {
+                        const l0 = loadCount[analysis[0].id] || 0, l1 = loadCount[analysis[1].id] || 0;
+                        if (l1 < l0) { chosen = analysis[1].id; wasLB = true; }
+                    }
+                }
+                if (wasLB) {
+                    if (proto === 'pcertv3') stats.pcertv3.lbEvents++;
+                    else stats.pcertv4.lbEvents++;
+                }
+
+                // v4: check if ETX on this edge was a significant factor (etx > 1.5)
+                if (proto === 'pcertv4') {
+                    const chosenEtx = getETX(cur, chosen);
+                    // Check if we avoided a bad-ETX neighbor
+                    const avoidedBadEtx = analysis.some(a => a.id !== chosen && a.etx > 1.5 && a.cost < Infinity);
+                    if (avoidedBadEtx) { etxSaveOccurred = true; stats.pcertv4.etxSaves++; }
+                }
+
+                if (nodes[chosen].battery <= 0 && chosen !== DEST) { path.push(chosen); failReason = 'dead'; break; }
+                path.push(chosen);
+                visited.add(chosen);
+                loadCount[chosen] = (loadCount[chosen] || 0) + 1;
+                cost += edgeDelay(cur, chosen);
+
+                if (proto !== 'baseline') {
+                    fhist[chosen].recv++;
+                    if (Math.random() < (trust[chosen] || 0.7)) fhist[chosen].fwd++;
+                    calcTrust(chosen);
+                    highlightNode = chosen;
+                }
+                cur = chosen;
+            }
+
+            return { src, path, cost, tag, failReason, firstAnalysis, etxSaveOccurred };
+        }
+
+        // ── Packet management ─────────────────────────────────────────
+        function spawnPacket(forcedTag = -1) {
+            const tag = forcedTag >= 0 ? forcedTag : [0, 1, 1, 2, 2][Math.floor(Math.random() * 5)];
+            const result = buildPath(tag);
+            if (!result) return;
+            const { path, cost, failReason, firstAnalysis } = result;
+            const failed = !!failReason;
+            const p = {
+                tag, path, cost, currentIdx: 0, progress: 0, alive: true, trail: [],
+                failedAt: failed ? path[path.length - 1] : -1, failReason,
+                lbTag: false,
+            };
+            packets.push(p);
+            updateRoutingPanel(p, firstAnalysis, path);
+        }
+
+        function recordDelivery(p, success) {
+            const s = stats[proto];
+            if (success) {
+                s.cnt++; s.latSum += p.cost;
+                if (proto === 'rpl') { const at = p.path.reduce((a, id) => a + (trust[id] || 0), 0) / p.path.length; stats.rpl.tSum += at; stats.rpl.tCnt++; }
+                if ((proto === 'pcertv3' || proto === 'pcertv4') && p.tag === 0) { s.critCnt++; s.critLatSum += p.cost; }
+            } else s.lost++;
+            updateScorecards();
+        }
+
+        // ── Tick ──────────────────────────────────────────────────────
+        function tick(dt) {
+            simTime += dt;
+            // ETX slow recovery
+            etxRecovery(dt);
+
+            nodes.forEach(n => {
+                if (n.type === 'mains') { n.battery = 1; }
+                else if (n.battery > 0) {
+                    const dr = n.type === 'fast' ? 0.013 : 0.004;
+                    n.battery = Math.max(0, n.battery - dr * dt);
+                    if (n.battery === 0 && !n.dead) {
+                        n.dead = true;
+                        log(`☠️ Node ${n.id} (${n.label}) battery dead`, 'fail');
+                        if (proto !== 'baseline') calcTrust(n.id);
+                    }
+                }
+            });
+
+            if (simTime >= nextSpawn) {
+                spawnPacket();
+                nextSpawn = simTime + 0.26 + Math.random() * 0.5;
+                if (Math.floor(simTime) % 10 === 0) { for (const k in loadCount) loadCount[k] = Math.max(0, (loadCount[k] || 0) - 1); }
+            }
+
+            const spd = 2.2;
+            for (const p of packets) {
+                if (!p.alive) continue;
+                p.progress += spd * dt;
+                const u = nodes[p.path[p.currentIdx]], v = nodes[p.path[p.currentIdx + 1]];
+                const pos = { x: u.x + (v.x - u.x) * p.progress, y: u.y + (v.y - u.y) * p.progress };
+                p.trail.push({ x: pos.x, y: pos.y, age: 0 });
+                if (p.trail.length > 22) p.trail.shift();
+                if (p.progress >= 1) {
+                    p.currentIdx++; p.progress = 0;
+                    if (p.path[p.currentIdx] === p.failedAt) { p.alive = false; recordDelivery(p, false); }
+                    else if (p.currentIdx >= p.path.length - 1) { p.alive = false; recordDelivery(p, true); }
+                }
+            }
+            for (const p of packets) for (const t of p.trail) t.age += dt;
+            packets = packets.filter(p => p.alive || p.trail.some(t => t.age < 0.45));
+        }
+
+        // ── Render ────────────────────────────────────────────────────
+        function render() {
+            ctx.clearRect(0, 0, W, H);
+            const isV4 = proto === 'pcertv4', isV3 = proto === 'pcertv3', isRpl = proto === 'rpl';
+            const isTrust = isV4 || isV3 || isRpl;
+
+            // Edges
+            for (const [u, v, d] of edges) {
+                const nu = nodes[u], nv = nodes[v];
+                const etxVal = getETX(u, v);
+                const isHighETX = etxVal > 1.5;
+                const isDegEdge = etxHighlightEdge && ((etxHighlightEdge[0] === u && etxHighlightEdge[1] === v) || (etxHighlightEdge[0] === v && etxHighlightEdge[1] === u));
+
+                ctx.beginPath(); ctx.moveTo(nu.x, nu.y); ctx.lineTo(nv.x, nv.y);
+                if (isDegEdge && isV4) {
+                    ctx.strokeStyle = 'rgba(248,120,48,0.55)'; ctx.lineWidth = 2.5;
+                } else if (isHighETX && isV4) {
+                    ctx.strokeStyle = 'rgba(248,120,48,0.28)'; ctx.lineWidth = 1.8;
+                } else {
+                    ctx.strokeStyle = '#192338'; ctx.lineWidth = 1.5;
+                }
+                ctx.stroke();
+
+                const mx = (nu.x + nv.x) / 2, my = (nu.y + nv.y) / 2;
+                ctx.font = '8px Share Tech Mono'; ctx.textAlign = 'center';
+                if (isV4 && isHighETX) {
+                    ctx.fillStyle = 'rgba(248,120,48,0.7)';
+                    ctx.fillText(`ETX:${etxVal.toFixed(1)}`, mx, my - 5);
+                } else {
+                    ctx.fillStyle = '#253553';
+                    ctx.fillText(d + 'ms', mx, my - 5);
+                }
+            }
+
+            // Trails
+            for (const p of packets) {
+                for (const t of p.trail) {
+                    const alpha = Math.max(0, 1 - t.age * 2.5); if (alpha <= 0) continue;
+                    ctx.beginPath(); ctx.arc(t.x, t.y, 3.5, 0, Math.PI * 2);
+                    const c = isV4 ? '#08c8e8' : TAG_COLORS[p.tag];
+                    const r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16);
+                    ctx.fillStyle = `rgba(${r},${g},${b},${alpha * 0.5})`; ctx.fill();
+                }
+            }
+
+            // Packets
+            for (const p of packets) {
+                if (!p.alive) continue;
+                const u = nodes[p.path[p.currentIdx]], v = nodes[p.path[p.currentIdx + 1]];
+                const pos = { x: u.x + (v.x - u.x) * p.progress, y: u.y + (v.y - u.y) * p.progress };
+                const col = isV4 ? '#08c8e8' : TAG_COLORS[p.tag];
+                ctx.shadowBlur = isV4 ? 16 : 9;
+                ctx.shadowColor = isV4 ? '#08c8e8' : col;
+                ctx.beginPath(); ctx.arc(pos.x, pos.y, isV4 ? 6.5 : 5.5, 0, Math.PI * 2);
+                ctx.fillStyle = col; ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            // Nodes
+            for (const n of nodes) {
+                const dead = n.battery <= 0;
+                const tr = trust[n.id] ?? 0.7;
+                const bl = blacklist.has(n.id);
+                const highlighted = n.id === highlightNode && isTrust;
+                const etxHigh = isV4 && n.id !== DEST && n.id !== 0 &&
+                    (adj[n.id] || []).some(a => getETX(n.id, a.node) > 1.5);
+
+                // Trust arc ring
+                if (isTrust && n.id !== DEST && n.id !== 0 && !dead) {
+                    let rc = tr >= 0.7 ? '#20c060' : tr >= 0.4 ? '#e8b820' : '#f04040';
+                    ctx.beginPath();
+                    ctx.arc(n.x, n.y, 26, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * tr);
+                    ctx.strokeStyle = rc; ctx.lineWidth = 2.5; ctx.globalAlpha = 0.55; ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+
+                // v4: ETX quality ring (dashed outer ring for high-ETX nodes)
+                if (isV4 && etxHigh && !dead) {
+                    ctx.save();
+                    ctx.setLineDash([3, 3]);
+                    ctx.beginPath(); ctx.arc(n.x, n.y, 30, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(248,120,48,0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+                    ctx.restore();
+                }
+
+                // Preferred hop glow
+                if (highlighted && isV4) {
+                    ctx.beginPath(); ctx.arc(n.x, n.y, 29, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#08c8e8'; ctx.lineWidth = 2; ctx.globalAlpha = 0.8; ctx.stroke();
+                    ctx.globalAlpha = 1;
+                } else if (highlighted && isV3) {
+                    ctx.beginPath(); ctx.arc(n.x, n.y, 29, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#f8c030'; ctx.lineWidth = 2; ctx.globalAlpha = 0.75; ctx.stroke();
+                    ctx.globalAlpha = 1;
+                } else if (highlighted && isRpl) {
+                    ctx.beginPath(); ctx.arc(n.x, n.y, 29, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#9040f0'; ctx.lineWidth = 2; ctx.globalAlpha = 0.7; ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+
+                // Soft energy demotion glow
+                if ((isV3 || isV4) && n.battery > BAT_HARD && n.battery < BAT_SOFT && n.id !== DEST) {
+                    ctx.beginPath(); ctx.arc(n.x, n.y, 24, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#f07830'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.5; ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+
+                // Node circle
+                ctx.beginPath(); ctx.arc(n.x, n.y, 20, 0, Math.PI * 2);
+                ctx.fillStyle = dead ? '#0c1120' : '#0f1520'; ctx.fill();
+                let strokeC = dead ? '#f04040' : bl ? 'rgba(240,64,64,.5)' : '#192338';
+                if (n.id === 0) strokeC = '#1e3a5f';
+                if (n.id === DEST) strokeC = '#1a4a2a';
+                ctx.strokeStyle = strokeC; ctx.lineWidth = dead || bl ? 2 : 1.5; ctx.stroke();
+
+                // Icon
+                ctx.font = '17px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.globalAlpha = dead ? 0.15 : bl ? 0.3 : 1;
+                ctx.fillText(n.icon, n.x, n.y + 1); ctx.globalAlpha = 1;
+
+                // ID label
+                ctx.font = 'bold 7px Exo 2';
+                ctx.fillStyle = dead ? '#f04040' : n.id === 0 ? '#2878f0' : n.id === DEST ? '#20c060' : '#334155';
+                ctx.textBaseline = 'alphabetic';
+                ctx.fillText(n.id === 0 ? 'SRC' : n.id === DEST ? 'DST' : String(n.id), n.x, n.y - 24);
+
+                // Battery bar
+                if (n.type !== 'mains') {
+                    const bw = 22, bh = 3, bx = n.x - bw / 2, by = n.y + 23;
+                    ctx.fillStyle = '#0a0e18'; ctx.fillRect(bx, by, bw, bh);
+                    let fc = n.battery < 0.05 ? '#f04040' : n.battery < 0.2 ? '#e8b820' : '#20c060';
+                    if ((isV3 || isV4) && n.battery < BAT_SOFT && n.battery >= BAT_HARD) fc = '#f07830';
+                    ctx.fillStyle = fc; ctx.fillRect(bx, by, bw * n.battery, bh);
+                }
+
+                // Blacklist X
+                if (bl && !dead) {
+                    ctx.fillStyle = '#f04040'; ctx.font = 'bold 13px Arial';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.globalAlpha = 0.7; ctx.fillText('✕', n.x, n.y); ctx.globalAlpha = 1;
+                }
+            }
+        }
+
+        // ── UI helpers ────────────────────────────────────────────────
+        function log(msg, cls) {
+            const el = document.getElementById('elog');
+            const d = document.createElement('div');
+            d.className = 'le ' + (cls || '');
+            d.innerHTML = `<span class="t">[${simTime.toFixed(1)}s]</span> ${msg}`;
+            el.prepend(d);
+            if (el.children.length > 80) el.removeChild(el.lastChild);
+        }
+
+        function updateRoutingPanel(packet, analysis, path) {
+            if (!analysis) return;
+            const failed = packet.failedAt !== -1;
+            const bestId = failed ? -1 : path[1] ?? -1;
+            let html = `<div style="padding:5px 13px;font-size:10px;color:var(--muted2);font-family:'Rajdhani',sans-serif">
+    Sent <b style="color:${TAG_COLORS[packet.tag]}">${TAG_NAMES[packet.tag]}</b> via ${PROTONAMES[proto]}
+    <span style="color:var(--muted)">→ hops: ${path.join('→')}</span>
+  </div>`;
+            analysis.sort((a, b) => a.cost - b.cost);
+            analysis.forEach(a => {
+                const isBest = a.id === bestId;
+                const isDead = nodes[a.id]?.battery <= 0;
+                const isBL = blacklist.has(a.id);
+                let cls = isBest ? 'best' : '';
+                if (a.cost === Infinity || isDead || isBL) cls = 'dead bl';
+                const cStr = a.cost === Infinity ? '∞ blocked' : a.cost.toFixed(1);
+                const tr = trust[a.id] ?? 0.7;
+                const bat = nodes[a.id]?.battery ?? 1;
+                const etxVal = proto === 'pcertv4' ? getETX(0, a.id) : 1;
+
+                let tags = '';
+                if (proto === 'pcertv4') {
+                    if (isBL) tags += `<span class="ctag x">BL</span>`;
+                    if (tr < TRUST_SOFT) tags += `<span class="ctag t">T:${tr.toFixed(2)}</span>`;
+                    if (etxVal > 1.3) tags += `<span class="ctag etx">ETX:${etxVal.toFixed(2)}</span>`;
+                    if (bat < BAT_SOFT && bat > BAT_HARD) tags += `<span class="ctag e">SOFT</span>`;
+                    if (isBest && a.cost === analysis[0].cost) tags += `<span class="ctag mrhof">MRHOF</span>`;
+                } else if (proto === 'pcertv3') {
+                    if (isBL) tags += `<span class="ctag x">BL</span>`;
+                    if (tr < TRUST_SOFT) tags += `<span class="ctag t">T:${tr.toFixed(2)}</span>`;
+                    if (bat < BAT_SOFT && bat > BAT_HARD) tags += `<span class="ctag e">SOFT</span>`;
+                } else if (proto === 'rpl') {
+                    tags += `<span class="ctag t">T:${tr.toFixed(2)}</span>`;
+                }
+                html += `<div class="ci ${cls}">
+      <span>${nodes[a.id]?.icon || ''} #${a.id} ${nodes[a.id]?.label || ''}</span>
+      <span style="display:flex;align-items:center;gap:5px">${tags}<b>${cStr}</b></span>
+    </div>`;
+            });
+            document.getElementById('costList').innerHTML = html;
+
+            if (failed) {
+                const r = packet.failReason === 'no_route' ? `No route from #${packet.failedAt}` : `Node #${packet.failedAt} dead`;
+                log(`${TAG_NAMES[packet.tag]} DROPPED — ${r}`, 'fail');
+            } else {
+                const last = path[path.length - 2];
+                const extra = (proto === 'pcertv4') ? ` [T:${(trust[last] ?? 0).toFixed(2)} ETX:${getETX(last, DEST).toFixed(2)} bat:${((nodes[last]?.battery ?? 1) * 100).toFixed(0)}%]` : '';
+                log(`${TAG_NAMES[packet.tag]} → ${path.join('→')}${extra}`, TAG_CLS[packet.tag]);
+            }
+        }
+
+        function makeLBar(id, label, color, dlv, lost) {
+            const tot = dlv + lost, pct = tot > 0 ? (lost / tot * 100) : 0;
+            document.getElementById(id).innerHTML = `
+    <div class="lbar-label">${label}</div>
+    <div class="lbar-track"><div class="lbar-fill" style="width:${pct}%;background:${color}"></div></div>
+    <div class="lbar-pct" style="color:${color}">${pct.toFixed(0)}%</div>`;
+        }
+
+        function computeRouteStability() {
+            // Ratio of hysteresis-blocks to total routing decisions
+            const total = stats.pcertv4.cnt + stats.pcertv4.lost;
+            if (!total) return '—';
+            const stab = 1 - (stats.pcertv4.hystBlocks / Math.max(total, 1));
+            return (stab * 100).toFixed(0) + '%';
+        }
+
+        function updateScorecards() {
+            const b = stats.baseline, r = stats.rpl, v3 = stats.pcertv3, v4 = stats.pcertv4;
+            document.getElementById('mBLat').textContent = b.cnt > 0 ? (b.latSum / b.cnt).toFixed(1) + 'ms' : '0ms';
+            document.getElementById('mBDlv').textContent = b.cnt;
+            document.getElementById('mBLost').textContent = b.lost;
+
+            document.getElementById('mRLat').textContent = r.cnt > 0 ? (r.latSum / r.cnt).toFixed(1) + 'ms' : '0ms';
+            document.getElementById('mRDlv').textContent = r.cnt;
+            document.getElementById('mRLost').textContent = r.lost;
+            document.getElementById('mRTrust').textContent = r.tCnt > 0 ? (r.tSum / r.tCnt).toFixed(2) : '—';
+            document.getElementById('mRBL').textContent = blacklist.size;
+            document.getElementById('mRPdr').textContent = r.cnt + r.lost > 0 ? ((r.cnt / (r.cnt + r.lost)) * 100).toFixed(1) + '%' : '—';
+
+            document.getElementById('mV3Lat').textContent = v3.cnt > 0 ? (v3.latSum / v3.cnt).toFixed(1) + 'ms' : '0ms';
+            document.getElementById('mV3Dlv').textContent = v3.cnt;
+            document.getElementById('mV3Lost').textContent = v3.lost;
+            document.getElementById('mV3CritLat').textContent = v3.critCnt > 0 ? (v3.critLatSum / v3.critCnt).toFixed(1) + 'ms' : '0ms';
+            document.getElementById('mV3Pdr').textContent = v3.cnt + v3.lost > 0 ? ((v3.cnt / (v3.cnt + v3.lost)) * 100).toFixed(1) + '%' : '—';
+            document.getElementById('mV3LB').textContent = v3.lbEvents;
+
+            document.getElementById('mV4Lat').textContent = v4.cnt > 0 ? (v4.latSum / v4.cnt).toFixed(1) + 'ms' : '0ms';
+            document.getElementById('mV4Dlv').textContent = v4.cnt;
+            document.getElementById('mV4Lost').textContent = v4.lost;
+            document.getElementById('mV4CritLat').textContent = v4.critCnt > 0 ? (v4.critLatSum / v4.critCnt).toFixed(1) + 'ms' : '0ms';
+            document.getElementById('mV4Pdr').textContent = v4.cnt + v4.lost > 0 ? ((v4.cnt / (v4.cnt + v4.lost)) * 100).toFixed(1) + '%' : '—';
+            document.getElementById('mV4Stab').textContent = computeRouteStability();
+            document.getElementById('mV4ETX').textContent = v4.etxSaves;
+            document.getElementById('mV4Hyst').textContent = v4.hystBlocks;
+            document.getElementById('mV4LB').textContent = v4.lbEvents;
+
+            makeLBar('lb0', 'Baseline', '#f04040', b.cnt, b.lost);
+            makeLBar('lb1', 'RPL+Trust', '#9040f0', r.cnt, r.lost);
+            makeLBar('lb2', 'PCER-T v3', '#e8b820', v3.cnt, v3.lost);
+            makeLBar('lb3', 'PCER-T v4', '#08c8e8', v4.cnt, v4.lost);
+        }
+
+        function setProto(p) {
+            proto = p;
+            document.querySelectorAll('.pb').forEach(b => {
+                b.className = 'pb';
+                if (b.dataset.m === p) {
+                    b.className = 'pb pa-' + p;
+                }
+            });
+            ['baseline', 'rpl', 'pcertv3', 'pcertv4'].forEach(name => {
+                const cid = 'c' + name.charAt(0).toUpperCase() + name.slice(1);
+                const bid = 'b' + name.charAt(0).toUpperCase() + name.slice(1);
+                const card = document.getElementById(cid);
+                const badge = document.getElementById(bid);
+                if (card) card.style.opacity = name === p ? '1' : '0.4';
+                if (badge) badge.classList.toggle('on', name === p);
+            });
+            const isTrust = p === 'rpl' || p === 'pcertv3' || p === 'pcertv4';
+            document.getElementById('legend').style.display = isTrust ? 'block' : 'none';
+            document.getElementById('advBox').style.display = p === 'pcertv4' ? 'block' : 'none';
+            highlightNode = -1; etxHighlightEdge = null;
+            // Reset hysteresis memory on protocol switch
+            prevBestHop = {};
+            log(`<b>→ Protocol switched: ${PROTONAMES[p]}</b>`, 'sys');
+        }
+
+        // ── Engine ────────────────────────────────────────────────────
+        function loop(ts) {
+            if (!lastFrame) lastFrame = ts;
+            const dt = Math.min((ts - lastFrame) / 1000, 0.1) * speed;
+            lastFrame = ts;
+            if (playing) tick(dt);
+            render();
+            requestAnimationFrame(loop);
+        }
+
+        function resize() {
+            const a = document.getElementById('canvasArea');
+            canvas.width = W = a.clientWidth; canvas.height = H = a.clientHeight;
+            calcPos();
+        }
+
+        function init() {
+            canvas = document.getElementById('nc');
+            ctx = canvas.getContext('2d');
+            initAll(); resize();
+            window.addEventListener('resize', resize);
+
+            document.querySelectorAll('.pb').forEach(b => b.onclick = () => setProto(b.dataset.m));
+            document.querySelectorAll('.sbt').forEach(tab => {
+                tab.onclick = () => {
+                    document.querySelectorAll('.sbt').forEach(t => t.classList.remove('on'));
+                    document.querySelectorAll('.sbp').forEach(p => p.classList.remove('on'));
+                    tab.classList.add('on');
+                    document.getElementById('tab' + tab.dataset.tab.charAt(0).toUpperCase() + tab.dataset.tab.slice(1)).classList.add('on');
+                };
+            });
+
+            document.getElementById('btnPlay').onclick = () => {
+                playing = true;
+                document.getElementById('pulseDot').classList.add('active');
+                document.getElementById('simStatus').textContent = 'LIVE';
+                document.getElementById('btnPlay').style.display = 'none';
+                document.getElementById('btnPause').style.display = '';
+            };
+            document.getElementById('btnPause').onclick = () => {
+                playing = false;
+                document.getElementById('pulseDot').classList.remove('active');
+                document.getElementById('simStatus').textContent = 'PAUSED';
+                document.getElementById('btnPlay').style.display = '';
+                document.getElementById('btnPause').style.display = 'none';
+            };
+            document.getElementById('btnReset').onclick = () => {
+                initAll(); packets = []; simTime = 0; nextSpawn = 0;
+                stats.baseline = { latSum: 0, cnt: 0, lost: 0 };
+                stats.rpl = { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0 };
+                stats.pcertv3 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0 };
+                stats.pcertv4 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0 };
+                updateScorecards();
+                document.getElementById('elog').innerHTML = '';
+                document.getElementById('pulseDot').classList.remove('active');
+                document.getElementById('simStatus').textContent = 'IDLE';
+                document.getElementById('btnPlay').style.display = '';
+                document.getElementById('btnPause').style.display = 'none';
+                playing = false;
+                log('Network reset — batteries, ETX, and trust re-initialised', 'sys');
+            };
+            document.getElementById('btnCrit').onclick = () => spawnPacket(0);
+            document.getElementById('btnBulk').onclick = () => spawnPacket(2);
+            document.getElementById('btnAtk').onclick = randomDegradeNode;
+            document.getElementById('btnDegrade').onclick = degradeRandomLinkETX;
+
+            const spds = [0.5, 1, 2, 4];
+            document.getElementById('spdSlider').oninput = function () {
+                speed = spds[this.value - 1];
+                document.getElementById('spdVal').textContent = speed + '×';
+            };
+
+            setProto('baseline');
+            updateScorecards();
+            log('PCER-T v4 Hybrid loaded — 18-node mesh, 4 protocols (MRHOF-ETX + Hysteresis active in v4)', 'sys');
+            requestAnimationFrame(loop);
+        }
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>

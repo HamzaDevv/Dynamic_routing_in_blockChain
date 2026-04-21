@@ -1,0 +1,1810 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCER-T v3 — Final Optimised IoT Routing</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #080c14;
+            --surface: #0f1623;
+            --surface2: #141e2e;
+            --surface3: #1a2540;
+            --border: #1e2d45;
+            --border2: #253553;
+            --text: #e2e8f0;
+            --muted: #4a6080;
+            --muted2: #64748b;
+            --red: #ef4444;
+            --orange: #f97316;
+            --yellow: #f59e0b;
+            --green: #22c55e;
+            --teal: #14b8a6;
+            --blue: #3b82f6;
+            --violet: #a855f7;
+            --cyan: #06b6d4;
+            --lime: #84cc16;
+            --gold: #fbbf24;
+            --red-a: rgba(239, 68, 68, 0.12);
+            --yellow-a: rgba(245, 158, 11, 0.12);
+            --green-a: rgba(34, 197, 94, 0.12);
+            --violet-a: rgba(168, 85, 247, 0.12);
+            --cyan-a: rgba(6, 182, 212, 0.12);
+            --gold-a: rgba(251, 191, 36, 0.14);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Space Grotesk', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            font-size: 13px
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            grid-template-rows: 56px 1fr 54px;
+            height: 100vh
+        }
+
+        /* ── HEADER ── */
+        .hdr {
+            grid-column: 1/-1;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 22px;
+            z-index: 20;
+            gap: 12px
+        }
+
+        .logo {
+            font-family: 'Syne', sans-serif;
+            font-size: 19px;
+            font-weight: 800;
+            letter-spacing: -.5px;
+            white-space: nowrap
+        }
+
+        .logo em {
+            color: var(--gold);
+            font-style: normal
+        }
+
+        .logo small {
+            font-size: 11px;
+            font-weight: 400;
+            color: var(--muted2);
+            margin-left: 10px;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+            font-family: 'Space Grotesk', sans-serif
+        }
+
+        /* ── PROTOCOL TABS ── */
+        .proto-bar {
+            display: flex;
+            gap: 3px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 3px;
+            flex-shrink: 0
+        }
+
+        .pb {
+            padding: 5px 11px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            background: transparent;
+            color: var(--muted2);
+            letter-spacing: .6px;
+            text-transform: uppercase;
+            transition: all .22s;
+            white-space: nowrap
+        }
+
+        .pb:hover:not(.pa) {
+            color: var(--text);
+            background: var(--surface2)
+        }
+
+        .pb.pa-baseline {
+            background: var(--red-a);
+            color: var(--red);
+            border-color: rgba(239, 68, 68, .35)
+        }
+
+        .pb.pa-rpl {
+            background: var(--violet-a);
+            color: var(--violet);
+            border-color: rgba(168, 85, 247, .35)
+        }
+
+        .pb.pa-pcert {
+            background: var(--gold-a);
+            color: var(--gold);
+            border-color: rgba(251, 191, 36, .45);
+            box-shadow: 0 0 12px rgba(251, 191, 36, .15)
+        }
+
+        /* ── CANVAS ── */
+        .canvas-area {
+            position: relative;
+            overflow: hidden;
+            background: var(--bg)
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            z-index: 2
+        }
+
+        .cgrid {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, #1a2540 1px, transparent 1px);
+            background-size: 36px 36px;
+            pointer-events: none;
+            z-index: 1;
+            opacity: .5
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden
+        }
+
+        .sb-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0
+        }
+
+        .sbt {
+            flex: 1;
+            padding: 11px 0;
+            font-size: 10px;
+            font-weight: 700;
+            text-align: center;
+            cursor: pointer;
+            color: var(--muted2);
+            text-transform: uppercase;
+            letter-spacing: .9px;
+            border-bottom: 2px solid transparent;
+            transition: all .2s
+        }
+
+        .sbt.on {
+            color: var(--gold);
+            border-bottom-color: var(--gold)
+        }
+
+        .sbp {
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            flex: 1
+        }
+
+        .sbp.on {
+            display: flex
+        }
+
+        /* ── DASHBOARD ── */
+        .dash {
+            overflow-y: auto;
+            flex: 1;
+            padding: 12px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent
+        }
+
+        .scard {
+            border-radius: 9px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            position: relative;
+            overflow: hidden;
+            transition: opacity .3s, box-shadow .3s
+        }
+
+        .scard::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            border-radius: 2px
+        }
+
+        .scard.s-baseline::before {
+            background: var(--red)
+        }
+
+        .scard.s-rpl::before {
+            background: var(--violet)
+        }
+
+        .scard.s-pcert::before {
+            background: var(--gold)
+        }
+
+        .scard.s-pcert {
+            border-color: rgba(251, 191, 36, .25)
+        }
+
+        .sc-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 9px
+        }
+
+        .sc-name {
+            font-size: 12px;
+            font-weight: 700
+        }
+
+        .badge {
+            font-size: 8px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            display: none
+        }
+
+        .badge.on {
+            display: inline-block
+        }
+
+        .badge.b-baseline {
+            background: var(--red-a);
+            color: var(--red)
+        }
+
+        .badge.b-rpl {
+            background: var(--violet-a);
+            color: var(--violet)
+        }
+
+        .badge.b-pcert {
+            background: var(--gold-a);
+            color: var(--gold)
+        }
+
+        .mg {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 7px
+        }
+
+        .met .lbl {
+            font-size: 9px;
+            color: var(--muted2);
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            margin-bottom: 3px
+        }
+
+        .met .v {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text)
+        }
+
+        .met .v.red {
+            color: var(--red)
+        }
+
+        .met .v.green {
+            color: var(--green)
+        }
+
+        .met .v.violet {
+            color: var(--violet)
+        }
+
+        .met .v.gold {
+            color: var(--gold)
+        }
+
+        .sub-mg {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border)
+        }
+
+        /* Advantage callout */
+        .adv-box {
+            background: linear-gradient(135deg, rgba(251, 191, 36, .07), rgba(6, 182, 212, .05));
+            border: 1px solid rgba(251, 191, 36, .2);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px
+        }
+
+        .adv-title {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            font-weight: 700;
+            color: var(--gold);
+            margin-bottom: 6px
+        }
+
+        .adv-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 3px 0;
+            font-size: 10px;
+            color: var(--muted2)
+        }
+
+        .adv-row .icon {
+            font-size: 12px;
+            flex-shrink: 0
+        }
+
+        .adv-row b {
+            color: var(--text)
+        }
+
+        /* loss bars */
+        .loss-section {
+            padding: 8px 0 0
+        }
+
+        .ls-title {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted2);
+            font-weight: 700;
+            margin-bottom: 7px
+        }
+
+        .lbar-row {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 5px
+        }
+
+        .lbar-label {
+            font-size: 9px;
+            font-family: 'IBM Plex Mono', monospace;
+            min-width: 70px;
+            color: var(--muted2)
+        }
+
+        .lbar-track {
+            flex: 1;
+            background: var(--bg);
+            border-radius: 3px;
+            height: 6px;
+            overflow: hidden
+        }
+
+        .lbar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width .6s cubic-bezier(.4, 0, .2, 1)
+        }
+
+        .lbar-pct {
+            font-size: 9px;
+            font-family: 'IBM Plex Mono', monospace;
+            min-width: 30px;
+            text-align: right
+        }
+
+        /* ── ROUTING TAB ── */
+        .rtitle {
+            padding: 9px 14px 4px;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--muted2);
+            font-weight: 700;
+            flex-shrink: 0
+        }
+
+        .cost-list {
+            flex-shrink: 0;
+            max-height: 180px;
+            overflow-y: auto;
+            scrollbar-width: thin
+        }
+
+        .ci {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 14px;
+            border-bottom: 1px solid var(--border);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            color: var(--text)
+        }
+
+        .ci.best {
+            background: rgba(34, 197, 94, .07);
+            color: var(--green)
+        }
+
+        .ci.dead {
+            background: rgba(239, 68, 68, .07);
+            color: var(--red)
+        }
+
+        .ci.bl {
+            background: rgba(239, 68, 68, .05);
+            color: rgba(239, 68, 68, .6)
+        }
+
+        .ci .tags {
+            display: flex;
+            gap: 4px
+        }
+
+        .ctag {
+            font-size: 8px;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: 700
+        }
+
+        .ctag.t {
+            background: var(--violet-a);
+            color: var(--violet)
+        }
+
+        .ctag.e {
+            background: var(--green-a);
+            color: var(--green)
+        }
+
+        .ctag.q {
+            background: var(--gold-a);
+            color: var(--gold)
+        }
+
+        .ctag.x {
+            background: var(--red-a);
+            color: var(--red)
+        }
+
+        /* event log */
+        .elog {
+            overflow-y: auto;
+            flex: 1;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent
+        }
+
+        .le {
+            padding: 5px 14px;
+            border-bottom: 1px solid rgba(30, 45, 69, .4);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            line-height: 1.5;
+            animation: fadein .25s
+        }
+
+        .le .t {
+            color: var(--muted)
+        }
+
+        .le.fail {
+            color: var(--red)
+        }
+
+        .le.crit {
+            color: #f87171
+        }
+
+        .le.std {
+            color: var(--yellow)
+        }
+
+        .le.bulk {
+            color: var(--blue)
+        }
+
+        .le.gold {
+            color: var(--gold)
+        }
+
+        .le.sys {
+            color: var(--cyan)
+        }
+
+        .le.trust {
+            color: var(--violet)
+        }
+
+        /* ── DEEP DIVE TAB ── */
+        .deep {
+            overflow-y: auto;
+            flex: 1;
+            padding: 12px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent
+        }
+
+        .rb {
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface2)
+        }
+
+        .rb h4 {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 7px
+        }
+
+        .rb h4.cyan {
+            color: var(--cyan)
+        }
+
+        .rb h4.gold {
+            color: var(--gold)
+        }
+
+        .rb h4.violet {
+            color: var(--violet)
+        }
+
+        .rb h4.green {
+            color: var(--green)
+        }
+
+        .rb h4.red {
+            color: var(--red)
+        }
+
+        .rb p {
+            font-size: 11px;
+            color: #7a9abf;
+            line-height: 1.65
+        }
+
+        .rb .cite {
+            font-size: 9px;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--muted);
+            margin-top: 7px;
+            padding-top: 7px;
+            border-top: 1px solid var(--border)
+        }
+
+        .chip {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .6px;
+            margin: 2px
+        }
+
+        .chip.etx {
+            background: var(--cyan-a);
+            color: var(--cyan)
+        }
+
+        .chip.re {
+            background: var(--green-a);
+            color: var(--green)
+        }
+
+        .chip.tr {
+            background: var(--violet-a);
+            color: var(--violet)
+        }
+
+        .chip.qos {
+            background: var(--gold-a);
+            color: var(--gold)
+        }
+
+        .chip.nfr {
+            background: var(--red-a);
+            color: var(--red)
+        }
+
+        .chip.lb {
+            background: rgba(20, 184, 166, .15);
+            color: var(--teal)
+        }
+
+        .code-box {
+            background: var(--bg);
+            border-radius: 6px;
+            padding: 9px;
+            margin-top: 7px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            color: var(--cyan);
+            line-height: 1.7;
+            border: 1px solid var(--border)
+        }
+
+        .formula-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 8px;
+            background: var(--bg);
+            border-radius: 4px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            margin-bottom: 3px
+        }
+
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 6px
+        }
+
+        .cg-cell {
+            padding: 7px 9px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg)
+        }
+
+        .cg-cell .cg-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            font-weight: 700;
+            margin-bottom: 4px
+        }
+
+        .cg-cell .cg-val {
+            font-size: 10px;
+            color: #7a9abf;
+            line-height: 1.5
+        }
+
+        /* canvas legend */
+        .legend {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 10;
+            background: rgba(8, 12, 20, .88);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 10px;
+            backdrop-filter: blur(6px)
+        }
+
+        .legend-title {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .9px;
+            color: var(--muted2);
+            margin-bottom: 6px;
+            font-size: 9px
+        }
+
+        .lg-row {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 3px
+        }
+
+        .lg-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0
+        }
+
+        /* ── CONTROLS ── */
+        .controls {
+            grid-column: 1/-1;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 0 22px;
+            flex-wrap: wrap
+        }
+
+        .btn {
+            padding: 8px 17px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .18s;
+            letter-spacing: .4px;
+            white-space: nowrap
+        }
+
+        .btn:active {
+            transform: scale(.95)
+        }
+
+        .btn-play {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue)
+        }
+
+        .btn-pause {
+            background: var(--yellow-a);
+            color: var(--yellow);
+            border-color: var(--yellow)
+        }
+
+        .btn-reset {
+            background: transparent;
+            color: var(--muted2)
+        }
+
+        .btn-reset:hover {
+            color: var(--text)
+        }
+
+        .btn-crit {
+            background: var(--red-a);
+            color: var(--red);
+            border-color: rgba(239, 68, 68, .4);
+            font-size: 11px;
+            padding: 6px 13px
+        }
+
+        .btn-atk {
+            background: var(--violet-a);
+            color: var(--violet);
+            border-color: rgba(168, 85, 247, .4);
+            font-size: 11px;
+            padding: 6px 13px
+        }
+
+        .btn-gold {
+            background: var(--gold-a);
+            color: var(--gold);
+            border-color: rgba(251, 191, 36, .4);
+            font-size: 11px;
+            padding: 6px 13px
+        }
+
+        .spd {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto
+        }
+
+        .spd label {
+            font-size: 10px;
+            color: var(--muted2);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .8px
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 4px;
+            outline: none
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--gold);
+            cursor: pointer;
+            box-shadow: 0 0 6px rgba(251, 191, 36, .5)
+        }
+
+        .sv {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+            min-width: 26px
+        }
+
+        @keyframes fadein {
+            from {
+                opacity: 0;
+                transform: translateY(3px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: .7
+            }
+
+            50% {
+                opacity: 1
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+
+        <!-- HEADER -->
+        <div class="hdr">
+            <div style="display:flex;align-items:center;gap:0">
+                <div class="logo"><em>PCER-T</em> IoT Mesh<small>v3 · Final Optimised</small></div>
+            </div>
+            <div class="proto-bar" id="protoBar">
+                <button class="pb pa-baseline" data-m="baseline">OSPF Baseline</button>
+                <button class="pb" data-m="rpl">RPL-MRHOF+Trust</button>
+                <button class="pb pa-pcert" data-m="pcert">★ PCER-T (Final)</button>
+            </div>
+        </div>
+
+        <!-- CANVAS -->
+        <div class="canvas-area" id="canvasArea">
+            <div class="cgrid"></div>
+            <canvas id="nc"></canvas>
+            <div class="legend" id="legend" style="display:none">
+                <div class="legend-title">Node Trust Level (PCER-T / RPL)</div>
+                <div class="lg-row">
+                    <div class="lg-dot" style="background:#22c55e"></div><span style="color:#7a9abf">High ≥0.7 —
+                        preferred</span>
+                </div>
+                <div class="lg-row">
+                    <div class="lg-dot" style="background:#f59e0b"></div><span style="color:#7a9abf">Medium
+                        0.4–0.7</span>
+                </div>
+                <div class="lg-row">
+                    <div class="lg-dot" style="background:#ef4444"></div><span style="color:#7a9abf">Low <0.4 —
+                            penalised</span>
+                </div>
+                <div class="lg-row">
+                    <div class="lg-dot" style="background:#fbbf24"></div><span style="color:#7a9abf">★ Load-balanced alt
+                        path</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="sb-tabs">
+                <div class="sbt on" data-tab="dash">Dashboard</div>
+                <div class="sbt" data-tab="routing">Routing</div>
+                <div class="sbt" data-tab="deep">Deep Dive</div>
+            </div>
+
+            <!-- DASHBOARD -->
+            <div class="sbp on" id="tabDash">
+                <div class="dash">
+
+                    <!-- PCER-T advantage box -->
+                    <div class="adv-box" id="advBox">
+                        <div class="adv-title">★ PCER-T Active Advantages</div>
+                        <div class="adv-row"><span class="icon">🏷️</span>
+                            <div><b>QoS Tag-Weights:</b> Critical=speed-first, Bulk=energy-first, Standard=balanced
+                            </div>
+                        </div>
+                        <div class="adv-row"><span class="icon">🔒</span>
+                            <div><b>Trust Guard:</b> NFR blacklisting + soft ETX penalty on low-trust nodes</div>
+                        </div>
+                        <div class="adv-row"><span class="icon">⚡</span>
+                            <div><b>Soft Energy Floor:</b> Demotion at 8%, hard block at 3% — no sudden drops</div>
+                        </div>
+                        <div class="adv-row"><span class="icon">⚖️</span>
+                            <div><b>Load Balancer:</b> Ties broken by forwarding history to spread traffic</div>
+                        </div>
+                    </div>
+
+                    <!-- Score cards -->
+                    <div class="scard s-baseline" id="cBaseline">
+                        <div class="sc-head">
+                            <div class="sc-name" style="color:var(--red)">OSPF Baseline</div>
+                            <div class="badge b-baseline" id="bBaseline">ACTIVE</div>
+                        </div>
+                        <div class="mg">
+                            <div class="met">
+                                <div class="lbl">Avg Latency</div>
+                                <div class="v" id="mBLat">0ms</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Delivered</div>
+                                <div class="v green" id="mBDlv">0</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Lost</div>
+                                <div class="v red" id="mBLost">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="scard s-rpl" id="cRpl" style="opacity:.45">
+                        <div class="sc-head">
+                            <div class="sc-name" style="color:var(--violet)">RPL-MRHOF+Trust</div>
+                            <div class="badge b-rpl" id="bRpl">ACTIVE</div>
+                        </div>
+                        <div class="mg">
+                            <div class="met">
+                                <div class="lbl">Avg Latency</div>
+                                <div class="v violet" id="mRLat">0ms</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Delivered</div>
+                                <div class="v green" id="mRDlv">0</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Lost</div>
+                                <div class="v red" id="mRLost">0</div>
+                            </div>
+                        </div>
+                        <div class="sub-mg mg">
+                            <div class="met">
+                                <div class="lbl">Avg Trust</div>
+                                <div class="v violet" id="mRTrust">—</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Blacklisted</div>
+                                <div class="v red" id="mRBL">0</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">PDR</div>
+                                <div class="v green" id="mRPdr">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="scard s-pcert" id="cPcert" style="opacity:.45">
+                        <div class="sc-head">
+                            <div class="sc-name" style="color:var(--gold)">★ PCER-T (Final)</div>
+                            <div class="badge b-pcert" id="bPcert">ACTIVE</div>
+                        </div>
+                        <div class="mg">
+                            <div class="met">
+                                <div class="lbl">Avg Latency</div>
+                                <div class="v gold" id="mPLat">0ms</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Delivered</div>
+                                <div class="v green" id="mPDlv">0</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Lost</div>
+                                <div class="v red" id="mPLost">0</div>
+                            </div>
+                        </div>
+                        <div class="sub-mg mg">
+                            <div class="met">
+                                <div class="lbl">Crit Latency</div>
+                                <div class="v gold" id="mPCritLat">0ms</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">PDR</div>
+                                <div class="v green" id="mPPdr">—</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Load Balance</div>
+                                <div class="v gold" id="mPLB">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Loss bar comparison -->
+                    <div class="loss-section">
+                        <div class="ls-title">Packet Loss Rate</div>
+                        <div id="lb0" class="lbar-row"></div>
+                        <div id="lb1" class="lbar-row"></div>
+                        <div id="lb2" class="lbar-row"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROUTING TAB -->
+            <div class="sbp" id="tabRouting">
+                <div class="rtitle">Last Packet — Neighbour Cost Breakdown</div>
+                <div class="cost-list" id="costList">
+                    <div style="padding:14px;color:var(--muted2);font-size:11px;font-style:italic">Waiting for first
+                        packet...</div>
+                </div>
+                <div class="rtitle" style="margin-top:2px">Event Log</div>
+                <div class="elog" id="elog"></div>
+            </div>
+
+            <!-- DEEP DIVE TAB -->
+            <div class="sbp" id="tabDeep">
+                <div class="deep">
+
+                    <div class="rb">
+                        <h4 class="gold">What is PCER-T?</h4>
+                        <p>PCER-T (Priority-Conscious Energy-Resilient with Trust) is the synthesised final protocol. It
+                            takes the three strongest capabilities from the research landscape and fuses them into a
+                            single cost function:</p>
+                        <div style="margin-top:8px">
+                            <span class="chip qos">QoS Tag-Weights (Proposed PCER)</span>
+                            <span class="chip tr">Trust + NFR Blacklist (RPL-MRHOF)</span>
+                            <span class="chip etx">ETX Penalty (MRHOF / RSOF)</span>
+                            <span class="chip re">Soft Energy Floor (PCER)</span>
+                            <span class="chip lb">Load Balancing (T-OF / MNP-OF)</span>
+                        </div>
+                        <div class="cite">Synthesised from: RSOF (Alotaibi et al. 2025) · BLET-IoT (J.Supercomputing
+                            2025) · T-OF · SMTrust-RPL (Sensors 2022) · Proposed PCER</div>
+                    </div>
+
+                    <div class="rb">
+                        <h4 class="gold">PCER-T Cost Function</h4>
+                        <p>For each candidate next-hop node <em>v</em>, cost is computed as:</p>
+                        <div class="code-box">
+                            <span style="color:var(--muted2)">// Hard guards (→ Infinity if violated)</span><br>
+                            IF nfr_blacklisted(v) → ∞<br>
+                            IF battery(v) &lt; 3% → ∞<br><br>
+                            <span style="color:var(--muted2)">// Soft demotion zone</span><br>
+                            energy_penalty = battery(v) &lt; 8%<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;?
+                            (0.08/battery(v)) × 25<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:
+                            (1/battery(v)) × 2<br><br>
+                            <span style="color:var(--muted2)">// Tag-adaptive weights</span><br>
+                            w_delay = [CRIT:0.85, STD:0.45, BULK:0.05]<br>
+                            w_energy = [CRIT:0.05, STD:0.30, BULK:0.65]<br>
+                            w_trust = [CRIT:0.08, STD:0.18, BULK:0.22]<br>
+                            w_lb = [CRIT:0.02, STD:0.07, BULK:0.08]<br><br>
+                            <span style="color:var(--muted2)">// Sub-costs</span><br>
+                            delay_cost = (edge_ms + h_dist) × w_delay<br>
+                            trust_cost = (1 − trust(v)) × 40 × w_trust<br>
+                            lb_cost = load_penalty(v) × w_lb<br><br>
+                            <span style="color:var(--gold)">cost = delay_cost + energy_penalty×w_energy<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ trust_cost + lb_cost</span>
+                        </div>
+                    </div>
+
+                    <div class="rb">
+                        <h4 class="cyan">Why Each Ingredient Matters</h4>
+                        <div class="compare-grid">
+                            <div class="cg-cell">
+                                <div class="cg-label" style="color:var(--gold)">Tag-Weights</div>
+                                <div class="cg-val">Proposed PCER used binary all-or-nothing weights. PCER-T uses
+                                    <em>fractional blends</em> — Critical still strongly prefers speed but doesn't zero
+                                    out energy, preventing it from burning a dying node.</div>
+                            </div>
+                            <div class="cg-cell">
+                                <div class="cg-label" style="color:var(--violet)">Trust Guard</div>
+                                <div class="cg-val">Trad. PCER and Proposed PCER had zero concept of node reliability
+                                    history. PCER-T tracks forwarding PDR per node and blacklists chronic droppers, just
+                                    like RSOF's NFR exclusion.</div>
+                            </div>
+                            <div class="cg-cell">
+                                <div class="cg-label" style="color:var(--teal)">Soft Floor</div>
+                                <div class="cg-label" style="color:var(--teal)"></div>
+                                <div class="cg-val">Old PCER had a hard 5% cutoff — nodes fell off a cliff. PCER-T has a
+                                    <em>demotion zone</em> at 8%: nodes get increasingly penalised before being
+                                    hard-blocked at 3%, preventing sudden route flaps.</div>
+                            </div>
+                            <div class="cg-cell">
+                                <div class="cg-label" style="color:var(--teal)">Load Balance</div>
+                                <div class="cg-val">Inspired by T-OF's NOCS metric. When two hops are near equal cost,
+                                    PCER-T prefers the one that has forwarded fewer packets recently — spreading wear
+                                    across the mesh.</div>
+                            </div>
+                        </div>
+                        <div class="cite">Hard guards from RSOF NFR exclusion | Soft floor from BLET-IoT energy-aware
+                            trust | LB from T-OF NOCS metric</div>
+                    </div>
+
+                    <div class="rb">
+                        <h4 class="green">Trad. PCER vs Proposed PCER vs PCER-T</h4>
+                        <div class="formula-row"><span style="color:var(--yellow)">Trad. PCER</span><span
+                                style="color:var(--muted2)">w1×delay + w2×(1/battery) [static w=1]</span></div>
+                        <div class="formula-row"><span style="color:var(--green)">Prop. PCER</span><span
+                                style="color:var(--muted2)">binary tag-weights + hard 5% floor</span></div>
+                        <div class="formula-row"
+                            style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2)"><span
+                                style="color:var(--gold)">PCER-T ★</span><span style="color:var(--text)">fractional tags
+                                + trust NFR + ETX + soft floor + LB</span></div>
+                        <div class="cite">PCER-T supersedes both previous PCER variants</div>
+                    </div>
+
+                    <div class="rb">
+                        <h4 class="red">What PCER-T Does NOT Have (Future Work)</h4>
+                        <p>To keep it implementable on constrained IoT hardware, PCER-T omits: cryptographic trust
+                            verification (blockchain), topology-level DIO message overhead management (full RPL), and
+                            TSCH slot scheduling. These remain open research directions.</p>
+                        <div class="cite">Ref: RFC 6550 DIO overhead | 6TiSCH TSCH | RPL-BlockTrust (2025)</div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTROLS -->
+        <div class="controls">
+            <button class="btn btn-play" id="btnPlay">▶ Start</button>
+            <button class="btn btn-pause" id="btnPause" style="display:none">⏸ Pause</button>
+            <button class="btn btn-reset" id="btnReset">↺ Reset</button>
+            <button class="btn btn-crit" id="btnCrit">🚨 Inject Critical</button>
+            <button class="btn btn-atk" id="btnAtk">⚠️ Degrade Node</button>
+            <button class="btn btn-gold" id="btnBulk">📦 Inject Bulk</button>
+            <div class="spd">
+                <label>Speed</label>
+                <input type="range" id="spdSlider" min="1" max="4" step="1" value="2">
+                <span class="sv" id="spdVal">1×</span>
+            </div>
+        </div>
+
+    </div><!-- .app -->
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════
+        // PCER-T v3 — Final Optimised Simulation
+        // Protocols: baseline | rpl | pcert
+        // ═══════════════════════════════════════════════════════════════════
+
+        const PROTONAMES = { baseline: 'OSPF Baseline', rpl: 'RPL-MRHOF+Trust', pcert: 'PCER-T (Final)' };
+        const TAG_NAMES = ['Critical', 'Standard', 'Bulk'];
+        const TAG_COLORS = ['#ef4444', '#f59e0b', '#3b82f6'];
+        const TAG_CLS = ['crit', 'std', 'bulk'];
+        const DEST = 17;
+
+        // ── Node definitions ─────────────────────────────────────────
+        const nodeDefs = [
+            { id: 0, label: 'Router', icon: '🌐', type: 'mains', initBat: 1.0 },
+            { id: 1, label: 'Smart TV', icon: '📺', type: 'mains', initBat: 1.0 },
+            { id: 2, label: 'Security Cam', icon: '📷', type: 'fast', initBat: 0.20 },
+            { id: 3, label: 'Smoke Alarm', icon: '🚨', type: 'med', initBat: 0.8 },
+            { id: 4, label: 'Laptop', icon: '💻', type: 'mains', initBat: 1.0 },
+            { id: 5, label: 'Thermostat', icon: '🌡️', type: 'med', initBat: 0.3 },
+            { id: 6, label: 'Fridge', icon: '🧊', type: 'mains', initBat: 1.0 },
+            { id: 7, label: 'Doorbell', icon: '🚪', type: 'med', initBat: 0.4 },
+            { id: 8, label: 'Smart Watch', icon: '⌚', type: 'fast', initBat: 0.15 },
+            { id: 9, label: 'Light Bulb', icon: '💡', type: 'mains', initBat: 1.0 },
+            { id: 10, label: 'Heart Mon.', icon: '🫀', type: 'fast', initBat: 0.6 },
+            { id: 11, label: 'AC Unit', icon: '❄️', type: 'mains', initBat: 1.0 },
+            { id: 12, label: 'Oven', icon: '♨️', type: 'mains', initBat: 1.0 },
+            { id: 13, label: 'Tablet', icon: '📱', type: 'med', initBat: 0.5 },
+            { id: 14, label: 'Speaker', icon: '🔊', type: 'mains', initBat: 1.0 },
+            { id: 15, label: 'Drone', icon: '🚁', type: 'fast', initBat: 0.25 },
+            { id: 16, label: 'Sensor', icon: '📡', type: 'med', initBat: 0.7 },
+            { id: 17, label: 'Cloud', icon: '☁️', type: 'mains', initBat: 1.0 }
+        ];
+
+        const edges = [
+            [0, 1, 10], [0, 2, 5], [0, 3, 15], [0, 4, 20],
+            [1, 5, 15], [2, 6, 10], [3, 7, 20], [4, 8, 15],
+            [5, 9, 20], [6, 10, 15], [7, 11, 10], [8, 12, 5],
+            [9, 13, 10], [10, 14, 20], [11, 15, 5], [12, 16, 10],
+            [13, 17, 20], [14, 17, 15], [15, 17, 10], [16, 17, 25],
+            [1, 2, 5], [2, 3, 10], [5, 6, 10], [7, 8, 10],
+            [9, 10, 5], [11, 12, 5], [13, 14, 10], [15, 16, 5],
+            [10, 13, 15], [11, 16, 10], [6, 9, 25], [3, 8, 5]
+        ];
+
+        // Build adjacency
+        const adj = {};
+        const edgeMap = {}; // "u_v" → delay
+        edges.forEach(([u, v, d]) => {
+            if (!adj[u]) adj[u] = [];
+            if (!adj[v]) adj[v] = [];
+            adj[u].push({ node: v, delay: d });
+            adj[v].push({ node: u, delay: d });
+            edgeMap[`${u}_${v}`] = d;
+            edgeMap[`${v}_${u}`] = d;
+        });
+
+        // Precompute hop-distance to DEST (Bellman-Ford)
+        const hDist = Object.fromEntries(Array.from({ length: 18 }, (_, i) => [i, 10000]));
+        hDist[DEST] = 0;
+        for (let v = 0; v < 18; v++) for (const [u, w, d] of edges) {
+            if (hDist[w] + d < hDist[u]) hDist[u] = hDist[w] + d;
+            if (hDist[u] + d < hDist[w]) hDist[w] = hDist[u] + d;
+        }
+        function edgeDelay(u, v) { return edgeMap[`${u}_${v}`] || 999 }
+
+        // ── Global state ──────────────────────────────────────────────
+        let nodes = [], packets = [];
+        let simTime = 0, playing = false, speed = 1, proto = 'baseline';
+        let nextSpawn = 0, lastFrame = 0;
+
+        // Trust state (shared between rpl and pcert)
+        let trust = {};       // nodeId → 0..1
+        let fhist = {};       // nodeId → {recv,fwd}
+        let blacklist = new Set();
+        let loadCount = {};   // nodeId → forwarding count this epoch (load balancing)
+        let lbSwaps = 0;      // count of times LB changed the chosen hop
+
+        const TRUST_HARD = 0.30;   // blacklist threshold
+        const TRUST_SOFT = 0.50;   // ETX penalty starts here
+        const BAT_HARD = 0.03;   // absolute block
+        const BAT_SOFT = 0.08;   // soft demotion start
+
+        // Per-protocol stats
+        const stats = {
+            baseline: { latSum: 0, cnt: 0, lost: 0 },
+            rpl: { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0 },
+            pcert: { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0 }
+        };
+
+        let canvas, ctx, W, H;
+        let highlightNode = -1; // last chosen transit node for visual
+
+        // ── Init ──────────────────────────────────────────────────────
+        function initAll() {
+            nodes = nodeDefs.map(d => ({ ...d, battery: d.initBat, dead: false }));
+            trust = {}; fhist = {}; blacklist.clear(); loadCount = {}; lbSwaps = 0;
+            for (let i = 0; i < 18; i++) {
+                trust[i] = 0.72 + Math.random() * 0.28;
+                fhist[i] = { recv: 12, fwd: 12 };
+                loadCount[i] = 0;
+            }
+            highlightNode = -1;
+            calcPos();
+        }
+
+        function calcPos() {
+            if (!W) return;
+            const px = Math.min(88, W * 0.09), wA = W - px * 2, hA = Math.min(H * 0.83, 570);
+            const layout = {
+                0: [0, .5], 1: [1, .13], 2: [1, .38], 3: [1, .63], 4: [1, .88],
+                5: [2, .08], 6: [2, .33], 7: [2, .58], 8: [2, .83], 9: [3, .13], 10: [3, .38],
+                11: [3, .63], 12: [3, .88], 13: [4, .08], 14: [4, .33], 15: [4, .58], 16: [4, .83], 17: [5, .5]
+            };
+            nodes.forEach(n => { const l = layout[n.id]; n.x = px + (l[0] / 5) * wA; n.y = (H - hA) / 2 + l[1] * hA; });
+        }
+
+        // ── Trust engine ─────────────────────────────────────────────
+        function calcTrust(id) {
+            const h = fhist[id], pdr = h.recv > 0 ? h.fwd / h.recv : 1;
+            const bat = nodes[id].battery;
+            const ls = 0.55 + Math.random() * 0.45; // simulated link stability
+            const t = Math.max(0, Math.min(1, 0.50 * pdr + 0.28 * bat + 0.22 * ls));
+            trust[id] = t;
+            const wasbl = blacklist.has(id);
+            if (t < TRUST_HARD && id !== DEST) { blacklist.add(id); if (!wasbl) log(`⛔ Node ${id} (${nodes[id].label}) blacklisted trust=${t.toFixed(2)}`, 'trust'); }
+            else blacklist.delete(id);
+            return t;
+        }
+        function degradeTrust(id) { fhist[id].recv += 12; fhist[id].fwd += 2; calcTrust(id); }
+        function randomDegradeNode() {
+            const candidates = [2, 3, 5, 7, 8, 10, 13, 15, 16].filter(i => !nodes[i].dead);
+            if (!candidates.length) return;
+            const pick = candidates[Math.floor(Math.random() * candidates.length)];
+            degradeTrust(pick);
+            log(`⚠️ Node ${pick} (${nodes[pick].label}) trust attack → ${trust[pick].toFixed(2)}`, 'trust');
+        }
+
+        // ── PCER-T Cost Function ──────────────────────────────────────
+        // The unified final approach:
+        // tag-adaptive fractional weights + trust/NFR blacklist + soft energy floor + load balance
+        const PCERT_WEIGHTS = {
+            //             delay   energy  trust  loadbal
+            0: { wd: 0.85, we: 0.05, wt: 0.08, wl: 0.02 },  // Critical: speed-first
+            1: { wd: 0.45, we: 0.30, wt: 0.18, wl: 0.07 },  // Standard: balanced
+            2: { wd: 0.05, we: 0.65, wt: 0.22, wl: 0.08 },  // Bulk: energy-first
+        };
+
+        function costPcerT(tag, u, vn) {
+            // Hard guards
+            if (blacklist.has(vn.id) && vn.id !== DEST) return Infinity;
+            if (vn.battery < BAT_HARD && vn.id !== DEST) return Infinity;
+
+            const edD = edgeDelay(u, vn.id);
+            const totalDelay = edD + hDist[vn.id];
+            const bat = vn.battery;
+            const tr = trust[vn.id] ?? 0.7;
+            const w = PCERT_WEIGHTS[tag];
+
+            // Soft energy floor: demotion zone 3-8%
+            let ePenalty;
+            if (bat < BAT_SOFT && vn.id !== DEST) {
+                ePenalty = (BAT_SOFT / bat) * 25; // exponential escalation
+            } else {
+                ePenalty = bat > 0 ? (1 / bat) * 2 : 1000;
+            }
+
+            // Trust cost: grows sharply when trust < TRUST_SOFT
+            let trustCost;
+            if (tr < TRUST_SOFT) {
+                trustCost = ((TRUST_SOFT - tr) / TRUST_SOFT) * 60; // heavier penalty below soft threshold
+            } else {
+                trustCost = (1 - tr) * 20;
+            }
+
+            // Load balance cost: penalise overloaded nodes
+            const lb = loadCount[vn.id] || 0;
+            const lbCost = lb * 0.8;
+
+            const delayCost = totalDelay * w.wd;
+            const energyCost = ePenalty * w.we;
+            const tCost = trustCost * w.wt;
+            const lCost = lbCost * w.wl;
+
+            return delayCost + energyCost + tCost + lCost;
+        }
+
+        function costRpl(u, vn) {
+            if (blacklist.has(vn.id) && vn.id !== DEST) return Infinity;
+            if (vn.battery < BAT_HARD && vn.id !== DEST) return Infinity;
+            const edD = edgeDelay(u, vn.id), re = vn.battery, tr = trust[vn.id] ?? 0.5;
+            const etxCost = (edD / 5) * 10, rePenalty = re > 0 ? (1 / re) * 2 : 1000;
+            const trustPenalty = (1 - tr) * 50;
+            return 0.4 * etxCost + 0.2 * rePenalty + 0.25 * trustPenalty + 0.15 * hDist[vn.id];
+        }
+
+        function costBaseline(u, vn) {
+            return edgeDelay(u, vn.id) + hDist[vn.id];
+        }
+
+        function getCost(u, vn, tag) {
+            if (proto === 'baseline') return costBaseline(u, vn);
+            if (proto === 'rpl') return costRpl(u, vn);
+            return costPcerT(tag, u, vn);
+        }
+
+        // ── Path finding ─────────────────────────────────────────────
+        function buildPath(tag) {
+            const srcs = [0, 1, 2, 5, 9, 13].filter(i => nodes[i].battery > 0);
+            if (!srcs.length) return null;
+            const src = srcs[Math.floor(Math.random() * srcs.length)];
+
+            const path = [src], visited = new Set([src]);
+            let cur = src, cost = 0, failReason = null, firstAnalysis = null;
+
+            while (cur !== DEST) {
+                const nbrs = adj[cur].map(a => a.node).filter(n => !visited.has(n));
+                const analysis = nbrs.map(nid => ({ id: nid, cost: getCost(cur, nodes[nid], tag) }));
+                if (cur === src) firstAnalysis = analysis;
+
+                // Sort by cost; for PCER-T check if top-2 are near-equal for LB
+                analysis.sort((a, b) => a.cost - b.cost);
+                if (!analysis.length || analysis[0].cost === Infinity) { failReason = 'no_route'; break; }
+
+                let chosen = analysis[0].id;
+                let wasLB = false;
+
+                // PCER-T load balancing: if two hops within 5% cost, prefer lower load
+                if (proto === 'pcert' && analysis.length >= 2) {
+                    const c0 = analysis[0].cost, c1 = analysis[1].cost;
+                    if (c1 < Infinity && (c1 - c0) / c0 < 0.05) {
+                        const l0 = loadCount[analysis[0].id] || 0, l1 = loadCount[analysis[1].id] || 0;
+                        if (l1 < l0) { chosen = analysis[1].id; wasLB = true; lbSwaps++; }
+                    }
+                }
+                if (wasLB) { stats.pcert.lbEvents++; }
+
+                if (nodes[chosen].battery <= 0 && chosen !== DEST) { path.push(chosen); failReason = 'dead'; break; }
+                path.push(chosen);
+                visited.add(chosen);
+                loadCount[chosen] = (loadCount[chosen] || 0) + 1;
+                cost += edgeDelay(cur, chosen);
+
+                // Update trust history for rpl/pcert
+                if (proto !== 'baseline') {
+                    fhist[chosen].recv++;
+                    if (Math.random() < (trust[chosen] || 0.7)) fhist[chosen].fwd++;
+                    calcTrust(chosen);
+                    highlightNode = chosen;
+                }
+                cur = chosen;
+            }
+
+            return { src, path, cost, tag, failReason, firstAnalysis };
+        }
+
+        // ── Packet management ────────────────────────────────────────
+        function spawnPacket(forcedTag = -1) {
+            const tag = forcedTag >= 0 ? forcedTag : [0, 1, 1, 2, 2][Math.floor(Math.random() * 5)];
+            const result = buildPath(tag);
+            if (!result) return;
+            const { path, cost, failReason, firstAnalysis } = result;
+            const failed = !!failReason;
+            const p = {
+                tag, path, cost, currentIdx: 0, progress: 0, alive: true, trail: [],
+                failedAt: failed ? path[path.length - 1] : -1, failReason,
+                lbTag: proto === 'pcert' && lbSwaps > 0
+            };
+            packets.push(p);
+            updateRoutingPanel(p, firstAnalysis, path);
+        }
+
+        function recordDelivery(p, success) {
+            if (proto === 'baseline') {
+                if (success) { stats.baseline.cnt++; stats.baseline.latSum += p.cost; }
+                else stats.baseline.lost++;
+            } else if (proto === 'rpl') {
+                if (success) { stats.rpl.cnt++; stats.rpl.latSum += p.cost; const at = p.path.reduce((a, id) => a + (trust[id] || 0), 0) / p.path.length; stats.rpl.tSum += at; stats.rpl.tCnt++; }
+                else stats.rpl.lost++;
+            } else {
+                if (success) { stats.pcert.cnt++; stats.pcert.latSum += p.cost; if (p.tag === 0) { stats.pcert.critCnt++; stats.pcert.critLatSum += p.cost; } }
+                else stats.pcert.lost++;
+            }
+            updateScorecards();
+        }
+
+        // ── Tick ─────────────────────────────────────────────────────
+        function tick(dt) {
+            simTime += dt;
+
+            // Battery drain
+            nodes.forEach(n => {
+                if (n.type === 'mains') { n.battery = 1; }
+                else if (n.battery > 0) {
+                    const dr = n.type === 'fast' ? 0.013 : 0.004;
+                    n.battery = Math.max(0, n.battery - dr * dt);
+                    if (n.battery === 0 && !n.dead) {
+                        n.dead = true;
+                        log(`☠️ Node ${n.id} (${n.label}) battery dead`, 'fail');
+                        if (proto !== 'baseline') calcTrust(n.id);
+                    }
+                }
+            });
+
+            // Spawn
+            if (simTime >= nextSpawn) {
+                spawnPacket();
+                nextSpawn = simTime + 0.26 + Math.random() * 0.5;
+                // Reset load counts every ~10s to avoid permanent bias
+                if (Math.floor(simTime) % 10 === 0) { for (const k in loadCount) loadCount[k] = Math.max(0, (loadCount[k] || 0) - 1); }
+            }
+
+            // Move packets
+            const spd = 2.2;
+            for (const p of packets) {
+                if (!p.alive) continue;
+                p.progress += spd * dt;
+                const u = nodes[p.path[p.currentIdx]], v = nodes[p.path[p.currentIdx + 1]];
+                const pos = { x: u.x + (v.x - u.x) * p.progress, y: u.y + (v.y - u.y) * p.progress };
+                p.trail.push({ x: pos.x, y: pos.y, age: 0 });
+                if (p.trail.length > 20) p.trail.shift();
+                if (p.progress >= 1) {
+                    p.currentIdx++; p.progress = 0;
+                    if (p.path[p.currentIdx] === p.failedAt) { p.alive = false; recordDelivery(p, false); }
+                    else if (p.currentIdx >= p.path.length - 1) { p.alive = false; recordDelivery(p, true); }
+                }
+            }
+            for (const p of packets) for (const t of p.trail) t.age += dt;
+            packets = packets.filter(p => p.alive || p.trail.some(t => t.age < 0.45));
+        }
+
+        // ── Render ───────────────────────────────────────────────────
+        function render() {
+            ctx.clearRect(0, 0, W, H);
+            const isPcert = proto === 'pcert', isRpl = proto === 'rpl', isTrust = isPcert || isRpl;
+
+            // Edges — highlight active-trust edges
+            for (const [u, v, d] of edges) {
+                const nu = nodes[u], nv = nodes[v];
+                ctx.beginPath(); ctx.moveTo(nu.x, nu.y); ctx.lineTo(nv.x, nv.y);
+                ctx.strokeStyle = '#1a2540'; ctx.lineWidth = 1.5; ctx.stroke();
+                const mx = (nu.x + nv.x) / 2, my = (nu.y + nv.y) / 2;
+                ctx.font = '8.5px IBM Plex Mono'; ctx.fillStyle = '#253553'; ctx.textAlign = 'center';
+                ctx.fillText(d + 'ms', mx, my - 5);
+            }
+
+            // Trails
+            for (const p of packets) {
+                for (const t of p.trail) {
+                    const alpha = Math.max(0, 1 - t.age * 2.5); if (alpha <= 0) continue;
+                    ctx.beginPath(); ctx.arc(t.x, t.y, 3.5, 0, Math.PI * 2);
+                    const c = TAG_COLORS[p.tag];
+                    const r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16);
+                    ctx.fillStyle = `rgba(${r},${g},${b},${alpha * 0.6})`; ctx.fill();
+                }
+            }
+
+            // Packets
+            for (const p of packets) {
+                if (!p.alive) continue;
+                const u = nodes[p.path[p.currentIdx]], v = nodes[p.path[p.currentIdx + 1]];
+                const pos = { x: u.x + (v.x - u.x) * p.progress, y: u.y + (v.y - u.y) * p.progress };
+                ctx.shadowBlur = isPcert ? 14 : 9; ctx.shadowColor = isPcert ? '#fbbf24' : TAG_COLORS[p.tag];
+                ctx.beginPath(); ctx.arc(pos.x, pos.y, isPcert ? 6 : 5.5, 0, Math.PI * 2);
+                ctx.fillStyle = isPcert ? '#fbbf24' : TAG_COLORS[p.tag]; ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            // Nodes
+            for (const n of nodes) {
+                const dead = n.battery <= 0;
+                const tr = trust[n.id] ?? 0.7;
+                const bl = blacklist.has(n.id);
+                const highlighted = n.id === highlightNode && isTrust;
+
+                // Trust arc ring (for trust-aware protocols)
+                if (isTrust && n.id !== DEST && n.id !== 0 && !dead) {
+                    let rc = '#22c55e';
+                    if (tr < 0.4) rc = '#ef4444';
+                    else if (tr < 0.7) rc = '#f59e0b';
+                    ctx.beginPath();
+                    ctx.arc(n.x, n.y, 26, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * tr);
+                    ctx.strokeStyle = rc; ctx.lineWidth = 2.5; ctx.globalAlpha = 0.55; ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+
+                // PCER-T preferred hop glow (gold)
+                if (highlighted && isPcert) {
+                    ctx.beginPath(); ctx.arc(n.x, n.y, 29, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2; ctx.globalAlpha = 0.75; ctx.stroke();
+                    ctx.globalAlpha = 1;
+                } else if (highlighted && isRpl) {
+                    ctx.beginPath(); ctx.arc(n.x, n.y, 29, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 2; ctx.globalAlpha = 0.7; ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+
+                // Soft demotion glow
+                if (isPcert && n.battery > BAT_HARD && n.battery < BAT_SOFT && n.id !== DEST) {
+                    ctx.beginPath(); ctx.arc(n.x, n.y, 24, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#f97316'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.5; ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+
+                // Node circle
+                ctx.beginPath(); ctx.arc(n.x, n.y, 20, 0, Math.PI * 2);
+                ctx.fillStyle = dead ? '#0c1120' : '#111827'; ctx.fill();
+                let strokeC = dead ? '#ef4444' : bl ? 'rgba(239,68,68,.5)' : '#1e2d45';
+                if (n.id === 0) strokeC = '#1e3a5f'; if (n.id === DEST) strokeC = '#1a4a2a';
+                ctx.strokeStyle = strokeC; ctx.lineWidth = dead || bl ? 2 : 1.5; ctx.stroke();
+
+                // Icon
+                ctx.font = '17px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.globalAlpha = dead ? 0.18 : bl ? 0.35 : 1;
+                ctx.fillText(n.icon, n.x, n.y + 1); ctx.globalAlpha = 1;
+
+                // ID label
+                ctx.font = 'bold 7.5px Space Grotesk';
+                ctx.fillStyle = dead ? '#ef4444' : n.id === 0 ? '#3b82f6' : n.id === DEST ? '#22c55e' : '#334155';
+                ctx.textBaseline = 'alphabetic';
+                ctx.fillText(n.id === 0 ? 'SRC' : n.id === DEST ? 'DST' : String(n.id), n.x, n.y - 24);
+
+                // Battery bar
+                if (n.type !== 'mains') {
+                    const bw = 22, bh = 3, bx = n.x - bw / 2, by = n.y + 23;
+                    ctx.fillStyle = '#0b0f1a'; ctx.fillRect(bx, by, bw, bh);
+                    let fc = n.battery < 0.05 ? '#ef4444' : n.battery < 0.2 ? '#f59e0b' : '#22c55e';
+                    // PCER-T soft zone indicator
+                    if (isPcert && n.battery < BAT_SOFT && n.battery >= BAT_HARD) fc = '#f97316';
+                    ctx.fillStyle = fc; ctx.fillRect(bx, by, bw * n.battery, bh);
+                }
+
+                // Blacklist indicator
+                if (bl && !dead) {
+                    ctx.fillStyle = '#ef4444'; ctx.font = 'bold 13px Arial';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.globalAlpha = 0.75; ctx.fillText('✕', n.x, n.y); ctx.globalAlpha = 1;
+                }
+            }
+        }
+
+        // ── UI helpers ────────────────────────────────────────────────
+        function log(msg, cls) {
+            const el = document.getElementById('elog');
+            const d = document.createElement('div');
+            d.className = 'le ' + (cls || '');
+            d.innerHTML = `<span class="t">[${simTime.toFixed(1)}s]</span> ${msg}`;
+            el.prepend(d);
+            if (el.children.length > 70) el.removeChild(el.lastChild);
+        }
+
+        function updateRoutingPanel(packet, analysis, path) {
+            if (!analysis) return;
+            const failed = packet.failedAt !== -1;
+            const bestId = failed ? -1 : path[1] ?? -1;
+            const pName = PROTONAMES[proto];
+            let html = `<div style="padding:6px 14px;font-size:10px;color:var(--muted2)">Sent <b style="color:${TAG_COLORS[packet.tag]}">${TAG_NAMES[packet.tag]}</b> via ${pName} → hops: ${path.join('→')}</div>`;
+            analysis.sort((a, b) => a.cost - b.cost);
+            analysis.forEach(a => {
+                const isBest = a.id === bestId;
+                const isDead = nodes[a.id]?.battery <= 0;
+                const isBL = blacklist.has(a.id);
+                let cls = isBest ? 'best' : '';
+                if (a.cost === Infinity || isDead || isBL) cls = 'dead bl';
+                const cStr = a.cost === Infinity ? '∞ blocked' : a.cost.toFixed(1);
+                const tr = trust[a.id] ?? 0.7;
+                const bat = nodes[a.id]?.battery ?? 1;
+
+                // Sub-tags to explain cost breakdown (PCER-T mode)
+                let tags = '';
+                if (proto === 'pcert') {
+                    if (isBL) tags += `<span class="ctag x">BL</span>`;
+                    if (tr < TRUST_SOFT) tags += `<span class="ctag t">T:${tr.toFixed(2)}</span>`;
+                    if (bat < BAT_SOFT && bat > BAT_HARD) tags += `<span class="ctag e">SOFT</span>`;
+                    if (isBest && packet.lbTag) tags += `<span class="ctag q">LB</span>`;
+                } else if (proto === 'rpl') {
+                    tags += `<span class="ctag t">T:${tr.toFixed(2)}</span>`;
+                }
+                html += `<div class="ci ${cls}"><span>→ ${nodes[a.id]?.icon || ''} #${a.id} ${nodes[a.id]?.label || ''}</span><span style="display:flex;align-items:center;gap:6px">${tags}<b>${cStr}</b></span></div>`;
+            });
+            document.getElementById('costList').innerHTML = html;
+
+            if (failed) {
+                const r = packet.failReason === 'no_route' ? `No route from #${packet.failedAt}` : `Node #${packet.failedAt} dead`;
+                log(`${TAG_NAMES[packet.tag]} DROPPED — ${r}`, 'fail');
+            } else {
+                const extra = proto === 'pcert' ? ` [T:${(trust[path[path.length - 2]] ?? 0).toFixed(2)} bat:${(nodes[path[path.length - 2]]?.battery ?? 1 * 100).toFixed(0)}%]` : '';
+                log(`${TAG_NAMES[packet.tag]} → ${path.join('→')}${extra}`, TAG_CLS[packet.tag]);
+            }
+        }
+
+        function makeLBar(id, label, color, dlv, lost) {
+            const tot = dlv + lost, pct = tot > 0 ? (lost / tot * 100) : 0, w = pct;
+            document.getElementById(id).innerHTML =
+                `<div class="lbar-label">${label}</div>
+     <div class="lbar-track"><div class="lbar-fill" style="width:${w}%;background:${color}"></div></div>
+     <div class="lbar-pct" style="color:${color}">${pct.toFixed(0)}%</div>`;
+        }
+
+        function updateScorecards() {
+            const b = stats.baseline, r = stats.rpl, p = stats.pcert;
+            document.getElementById('mBLat').textContent = b.cnt > 0 ? (b.latSum / b.cnt).toFixed(1) + 'ms' : '0ms';
+            document.getElementById('mBDlv').textContent = b.cnt;
+            document.getElementById('mBLost').textContent = b.lost;
+            document.getElementById('mRLat').textContent = r.cnt > 0 ? (r.latSum / r.cnt).toFixed(1) + 'ms' : '0ms';
+            document.getElementById('mRDlv').textContent = r.cnt;
+            document.getElementById('mRLost').textContent = r.lost;
+            document.getElementById('mRTrust').textContent = r.tCnt > 0 ? (r.tSum / r.tCnt).toFixed(2) : '—';
+            document.getElementById('mRBL').textContent = blacklist.size;
+            document.getElementById('mRPdr').textContent = r.cnt + r.lost > 0 ? ((r.cnt / (r.cnt + r.lost)) * 100).toFixed(1) + '%' : '—';
+            document.getElementById('mPLat').textContent = p.cnt > 0 ? (p.latSum / p.cnt).toFixed(1) + 'ms' : '0ms';
+            document.getElementById('mPDlv').textContent = p.cnt;
+            document.getElementById('mPLost').textContent = p.lost;
+            document.getElementById('mPCritLat').textContent = p.critCnt > 0 ? (p.critLatSum / p.critCnt).toFixed(1) + 'ms' : '0ms';
+            document.getElementById('mPPdr').textContent = p.cnt + p.lost > 0 ? ((p.cnt / (p.cnt + p.lost)) * 100).toFixed(1) + '%' : '—';
+            document.getElementById('mPLB').textContent = p.lbEvents;
+            makeLBar('lb0', 'Baseline', '#ef4444', b.cnt, b.lost);
+            makeLBar('lb1', 'RPL+Trust', '#a855f7', r.cnt, r.lost);
+            makeLBar('lb2', 'PCER-T ★', '#fbbf24', p.cnt, p.lost);
+        }
+
+        function setProto(p) {
+            proto = p;
+            document.querySelectorAll('.pb').forEach(b => {
+                b.className = 'pb';
+                if (b.dataset.m === p) b.className = 'pb pa-' + p;
+            });
+            ['baseline', 'rpl', 'pcert'].forEach(name => {
+                const cardId = 'c' + name.charAt(0).toUpperCase() + name.slice(1);
+                const badgeId = 'b' + name.charAt(0).toUpperCase() + name.slice(1);
+                const card = document.getElementById(cardId);
+                const badge = document.getElementById(badgeId);
+                if (card) card.style.opacity = name === p ? '1' : '0.4';
+                if (badge) { badge.classList.toggle('on', name === p); }
+            });
+            const trustActive = (p === 'rpl' || p === 'pcert');
+            document.getElementById('legend').style.display = trustActive ? 'block' : 'none';
+            document.getElementById('advBox').style.display = p === 'pcert' ? 'block' : 'none';
+            highlightNode = -1;
+            log(`<b>→ Protocol: ${PROTONAMES[p]}</b>`, 'sys');
+        }
+
+        // ── Engine ────────────────────────────────────────────────────
+        function loop(ts) {
+            if (!lastFrame) lastFrame = ts;
+            const dt = Math.min((ts - lastFrame) / 1000, 0.1) * speed;
+            lastFrame = ts;
+            if (playing) tick(dt);
+            render();
+            requestAnimationFrame(loop);
+        }
+
+        function resize() {
+            const a = document.getElementById('canvasArea');
+            canvas.width = W = a.clientWidth;
+            canvas.height = H = a.clientHeight;
+            calcPos();
+        }
+
+        // ── Boot ──────────────────────────────────────────────────────
+        function init() {
+            canvas = document.getElementById('nc');
+            ctx = canvas.getContext('2d');
+            initAll(); resize();
+            window.addEventListener('resize', resize);
+
+            document.querySelectorAll('.pb').forEach(b => b.onclick = () => setProto(b.dataset.m));
+
+            document.querySelectorAll('.sbt').forEach(tab => {
+                tab.onclick = () => {
+                    document.querySelectorAll('.sbt').forEach(t => t.classList.remove('on'));
+                    document.querySelectorAll('.sbp').forEach(p => p.classList.remove('on'));
+                    tab.classList.add('on');
+                    document.getElementById('tab' + tab.dataset.tab.charAt(0).toUpperCase() + tab.dataset.tab.slice(1)).classList.add('on');
+                };
+            });
+
+            document.getElementById('btnPlay').onclick = () => {
+                playing = true;
+                document.getElementById('btnPlay').style.display = 'none';
+                document.getElementById('btnPause').style.display = '';
+            };
+            document.getElementById('btnPause').onclick = () => {
+                playing = false;
+                document.getElementById('btnPlay').style.display = '';
+                document.getElementById('btnPause').style.display = 'none';
+            };
+            document.getElementById('btnReset').onclick = () => {
+                initAll(); packets = []; simTime = 0; nextSpawn = 0; lbSwaps = 0;
+                stats.baseline = { latSum: 0, cnt: 0, lost: 0 };
+                stats.rpl = { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0 };
+                stats.pcert = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0 };
+                updateScorecards();
+                document.getElementById('elog').innerHTML = '';
+                log('Network reset — batteries restored, trust re-initialised', 'sys');
+            };
+            document.getElementById('btnCrit').onclick = () => spawnPacket(0);
+            document.getElementById('btnBulk').onclick = () => spawnPacket(2);
+            document.getElementById('btnAtk').onclick = randomDegradeNode;
+
+            const spds = [0.5, 1, 2, 4];
+            document.getElementById('spdSlider').oninput = function () {
+                speed = spds[this.value - 1];
+                document.getElementById('spdVal').textContent = speed + '×';
+            };
+
+            setProto('baseline');
+            updateScorecards();
+            log('PCER-T v3 loaded — 18-node mesh, 3 protocols ready', 'sys');
+            requestAnimationFrame(loop);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>
