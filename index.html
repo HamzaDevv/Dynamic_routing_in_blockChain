@@ -706,12 +706,12 @@
       { id: 9, label: "Bulb", icon: "💡", type: "mains", initBat: 1.0 },
       { id: 10, label: "Oven", icon: "♨️", type: "mains", initBat: 1.0 },
       { id: 11, label: "Speaker", icon: "🔊", type: "mains", initBat: 1.0 },
-      { id: 12, label: "Tablet", icon: "📱", type: "mains", initBat: 1.0 },
+      { id: 12, label: "Mobile", icon: "📱", type: "med", initBat: 0.5 },
 
       // SCATTERED MESH
       { id: 13, label: "Alarm", icon: "🚨", type: "med", initBat: 0.5 },
       { id: 14, label: "Doorbell", icon: "🚪", type: "med", initBat: 0.5 },
-      { id: 15, label: "Therm", icon: "🌡️", type: "med", initBat: 0.5 },
+      { id: 15, label: "OSPF Trap", icon: "🪤", type: "fast", initBat: 0.2 }, // OSPF (hop-count) blindly takes this 2-hop trap
       { id: 16, label: "Cam", icon: "📷", type: "med", initBat: 0.5 },
 
       { id: 17, label: "Cloud", icon: "☁️", type: "mains", initBat: 1.0 }
@@ -733,7 +733,10 @@
       [1, 5, 30], [2, 6, 30], [3, 7, 30], [4, 8, 30],
       [5, 9, 30], [6, 10, 30], [7, 11, 30], [8, 12, 30],
       [13, 2, 10], [5, 13, 10], [6, 14, 10], [10, 14, 10],
-      [7, 15, 10], [4, 15, 10]
+      [16, 3, 10], [6, 16, 10],
+
+      // OSPF "Blind Shortest Path" Trap (Few hops, but massive delay)
+      [0, 15, 120], [15, 17, 120]
     ];
 
     const adj = {};
@@ -803,12 +806,21 @@
       if (!edge) return Infinity;
       const delay = edge[2];
 
-      if (protocol === 'baseline') return delay;
+      // 1. OSPF (Baseline): Blind shortest-path (Hop-count), causing Critical to take slow 2-hop traps
+      if (protocol === 'baseline') return 1;
 
+      // 2. Industry RPL (MRHOF): Tag-agnostic, uses ETX (approximated by delay) + node energy
+      if (protocol === 'rpl') {
+        const energyCost = vNode.battery > 0.0001 ? (1.0 / vNode.battery) : 10000;
+        return delay + energyCost; // Static weights, ignores packet tag
+      }
+
+      // 3. PCER (Traditional & Proposed): Priority-Coupled Elastic weights
       let w1 = 1, w2 = 1;
-      if (tag === 0) { w1 = 100; w2 = 0; }
-      else if (tag === 2) { w1 = 0; w2 = 100; }
+      if (tag === 0) { w1 = 100; w2 = 0; }        // CRITICAL: Delay focused
+      else if (tag === 2) { w1 = 0; w2 = 100; }   // BULK: Energy focused
 
+      // Proposed PCER strict survival threshold
       if (protocol === 'pcer' && vNode.battery < 0.05 && vNode.id !== destId) return Infinity;
 
       const eCost = vNode.battery > 0.0001 ? (1.0 / vNode.battery) : 10000;
@@ -834,7 +846,8 @@
         adj[u].forEach(neighbor => {
           if (!q.includes(neighbor.node)) return;
           const vNode = nodes[neighbor.node];
-          if (vNode.battery <= 0 && vNode.id !== destId) return;
+          // OSPF relies on static tables; emulate slow convergence causing it to route into dead nodes!
+          if (protocol !== 'baseline' && vNode.battery <= 0 && vNode.id !== destId) return;
 
           const cost = getEdgeCost(protocol, tag, u, vNode, destId);
           if (cost === Infinity) return;
@@ -922,6 +935,7 @@
         failedAt: -1,
         failReason: null,
         latency: routeCost,
+        accumulatedLatency: 0,
         trail: []
       };
 
@@ -976,23 +990,51 @@
         if (p.trail.length > 20) p.trail.shift();
 
         if (p.progress >= 1.0) {
+          p.accumulatedLatency += getDelay(p.path[p.currentPathIdx], p.path[p.currentPathIdx + 1]);
           p.currentPathIdx++;
           p.progress = 0;
 
           if (p.currentPathIdx >= p.path.length - 1) {
             p.alive = false;
+            p.latency = p.accumulatedLatency;
             recordStat(p, true);
             flashes.push({ x: nodes[p.destId].x, y: nodes[p.destId].y - 45, text: `✅ DELIVERED`, age: 0, color: '#166534' });
           } else {
-            // A node along the established path died while we were travelling!
+            // Mid-flight routing check
             const nextNode = nodes[p.path[p.currentPathIdx + 1]];
-            if (nextNode && nextNode.battery <= 0 && nextNode.id !== p.destId) {
-              p.alive = false;
-              p.failedAt = p.path[p.currentPathIdx];
-              p.deadNextHop = nextNode.id;
-              p.failReason = 'dead';
-              recordStat(p, false);
-              flashes.push({ x: nodes[p.failedAt].x, y: nodes[p.failedAt].y - 45, text: `❌ DEAD PATH`, age: 0, color: '#dc2626' });
+            const currNodeId = p.path[p.currentPathIdx];
+            
+            const isDeadNext = nextNode && nextNode.battery <= 0 && nextNode.id !== p.destId;
+            const pcerDanger = protocol === 'pcer' && nextNode && nextNode.battery < 0.05 && nextNode.id !== p.destId;
+
+            if (isDeadNext || pcerDanger) {
+              if (protocol !== 'pcer' && isDeadNext) {
+                // Legacy protocols drop the packet when they hit a dead node (No mid-flight reroute)
+                p.alive = false;
+                p.failedAt = currNodeId;
+                p.deadNextHop = nextNode.id;
+                p.failReason = 'dead';
+                recordStat(p, false);
+                flashes.push({ x: nodes[p.failedAt].x, y: nodes[p.failedAt].y - 45, text: `❌ DROPPED`, age: 0, color: '#dc2626' });
+              } else if (protocol === 'pcer') {
+                // Proposed PCER dynamically reroutes mid-flight due to death OR strict <0.05 threshold
+                const { path: newPath, failed } = calculateBestPath(currNodeId, p.destId, protocol, p.tag);
+
+                if (failed) {
+                  p.alive = false;
+                  p.failedAt = currNodeId;
+                  p.deadNextHop = nextNode.id;
+                  p.failReason = 'dead';
+                  recordStat(p, false);
+                  flashes.push({ x: nodes[p.failedAt].x, y: nodes[p.failedAt].y - 45, text: `❌ DEAD PATH`, age: 0, color: '#dc2626' });
+                } else {
+                  p.path = newPath;
+                  p.currentPathIdx = 0;
+                  flashes.push({ x: nodes[currNodeId].x, y: nodes[currNodeId].y - 45, text: `🔄 REROUTED`, age: 0, color: '#16a34a' });
+                  logEvent(`🔄 ${TAG_NAMES[p.tag]} dynamically rerouted at Node ${currNodeId} (Next node at risk). New Path: ${newPath.join('→')}`, 'standard');
+                  updateSidebarPath(p, newPath);
+                }
+              }
             }
           }
         }
@@ -1013,8 +1055,14 @@
         // Find which portion of the path we actually survived to print it correctly
         const survivedPath = packet.path.slice(0, packet.currentPathIdx + 1);
         const pathStr = survivedPath.join('→') + ' ✖';
-        const reasonStr = packet.failReason === 'no_route' ? 'PARTITION' : `NEXT HOP NODE ${packet.deadNextHop} IS DEAD`;
-        logEvent(`❌ ${TAG_NAMES[packet.tag]} (to ${packet.destId}) halted at Node ${packet.failedAt} (${reasonStr}). Path: ${pathStr}`, 'fail');
+        
+        let protocolContext = '';
+        if (protocol === 'baseline') protocolContext = ' (OSPF Blindness: Node Drained but Route persisted)';
+        else if (protocol === 'trad-pcer') protocolContext = ' (Trad PCER failure: Delay prioritized, ignored low battery)';
+        else if (protocol === 'rpl') protocolContext = ' (RPL failure: Did not proactively reroute)';
+        
+        const reasonStr = packet.failReason === 'no_route' ? 'PARTITION' : `NEXT HOP NODE ${packet.deadNextHop} BATTERY EXHAUSTED${protocolContext}`;
+        logEvent(`❌ ${TAG_NAMES[packet.tag]} (to ${packet.destId}) DROPPED at Node ${packet.failedAt} | ${reasonStr} | Path: ${pathStr}`, 'fail');
       } else {
         const pathStr = packet.path.join('→');
         logEvent(`✅ ${TAG_NAMES[packet.tag]} (to ${packet.destId}) delivered cleanly! (${packet.latency}ms). Path: ${pathStr}`, TAG_CLASS[packet.tag]);
