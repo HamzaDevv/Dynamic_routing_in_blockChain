@@ -5,7 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PCER Mesh Overhaul — IoT Routing Demo</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet">
   <style>
     /* ── RESET & BASE ────────────────────────────────── */
     * {
@@ -19,7 +21,6 @@
       color: #1a202c;
       font-family: 'Inter', sans-serif;
       overflow-x: hidden;
-      min-height: 100vh;
       font-size: 14px;
     }
 
@@ -158,8 +159,15 @@
       height: 100%;
       min-height: 0;
     }
-    .sidebar::-webkit-scrollbar { width: 6px; }
-    .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
 
     .sidebar-section {
       padding: 12px 18px;
@@ -184,12 +192,20 @@
       margin-bottom: 8px;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
-    .score-card.baseline { border-left: 6px solid #ef4444 }
-    .score-card.trad-pcer { border-left: 6px solid #eab308 }
-    .score-card.pcer { border-left: 6px solid #22c55e }
+    .score-card.baseline {
+      border-left: 6px solid #ef4444
+    }
+
+    .score-card.trad-pcer {
+      border-left: 6px solid #eab308
+    }
+
+    .score-card.pcer {
+      border-left: 6px solid #22c55e
+    }
 
     .score-title {
       font-size: 14px;
@@ -216,9 +232,17 @@
       color: #fff;
     }
 
-    .score-card.baseline .badge.active { background: #ef4444; }
-    .score-card.trad-pcer .badge.active { background: #eab308; }
-    .score-card.pcer .badge.active { background: #22c55e; }
+    .score-card.baseline .badge.active {
+      background: #ef4444;
+    }
+
+    .score-card.trad-pcer .badge.active {
+      background: #eab308;
+    }
+
+    .score-card.pcer .badge.active {
+      background: #22c55e;
+    }
 
     .metric-grid {
       display: grid;
@@ -232,21 +256,21 @@
     }
 
     .metric span:first-child {
-      font-size: 12px;
+      font-size: 11px;
       color: #475569;
       font-weight: 600;
       margin-bottom: 4px
     }
 
     .metric span:last-child {
-      font-size: 18px;
+      font-size: 16px;
       font-family: 'JetBrains Mono', monospace;
       font-weight: 800;
       color: #0f172a;
     }
 
     .metric.loss span:last-child {
-      color: #dc2626
+      color: inherit;
     }
 
     /* Live Path Cost */
@@ -291,9 +315,15 @@
       scrollbar-width: thin;
       padding-right: 4px;
     }
-    
-    #costRows::-webkit-scrollbar { width: 6px; }
-    #costRows::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+    #costRows::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #costRows::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
 
     /* Event Log */
     .event-log {
@@ -305,9 +335,19 @@
       min-height: 150px;
     }
 
-    .event-log::-webkit-scrollbar { width: 8px; }
-    .event-log::-webkit-scrollbar-track { background: #f1f5f9; }
-    .event-log::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; border: 1px solid #f1f5f9; }
+    .event-log::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .event-log::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    .event-log::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+      border: 1px solid #f1f5f9;
+    }
 
     .log-entry {
       font-size: 12px;
@@ -320,10 +360,25 @@
       color: #334155;
     }
 
-    .log-entry .time { color: #64748b }
-    .log-entry .critical { color: #dc2626; font-weight: 800; }
-    .log-entry .standard { color: #d97706; font-weight: 800; }
-    .log-entry .bulk { color: #2563eb; font-weight: 800; }
+    .log-entry .time {
+      color: #64748b
+    }
+
+    .log-entry .critical {
+      color: #dc2626;
+      font-weight: 800;
+    }
+
+    .log-entry .standard {
+      color: #d97706;
+      font-weight: 800;
+    }
+
+    .log-entry .bulk {
+      color: #2563eb;
+      font-weight: 800;
+    }
+
     .log-entry.fail {
       color: #dc2626;
       background: #fee2e2;
@@ -353,10 +408,12 @@
       cursor: pointer;
       transition: all .2s;
       outline: none;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .btn:active { transform: scale(.96) }
+    .btn:active {
+      transform: scale(.96)
+    }
 
     .btn-play {
       background: #2563eb;
@@ -475,10 +532,22 @@
           <div class="score-title">Baseline (Delay Only)
             <span class="badge active" id="badgeBaseline">ACTIVE</span>
           </div>
-          <div class="metric-grid">
+          <div class="metric-grid" style="grid-template-columns: 1fr 1fr">
             <div class="metric"><span>Avg Latency</span><span id="baseLatency">0 ms</span></div>
-            <div class="metric loss"><span>Lost</span><span id="baseLoss">0</span></div>
-            <div class="metric"><span>Sent</span><span id="baseDelivered" style="color:#0f172a">0</span></div>
+            <div class="metric"><span>Total Delivered</span><span id="baseDelivered" style="color:#0f172a">0</span>
+            </div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric" style="color:#dc2626"><span>C. Latency</span><span id="baseLat0">0 ms</span></div>
+            <div class="metric" style="color:#d97706"><span>S. Latency</span><span id="baseLat1">0 ms</span></div>
+            <div class="metric" style="color:#2563eb"><span>B. Latency</span><span id="baseLat2">0 ms</span></div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric loss" style="color:#dc2626"><span>Crit. Lost</span><span id="baseLoss0">0</span></div>
+            <div class="metric loss" style="color:#d97706"><span>Std. Lost</span><span id="baseLoss1">0</span></div>
+            <div class="metric loss" style="color:#2563eb"><span>Bulk Lost</span><span id="baseLoss2">0</span></div>
           </div>
         </div>
 
@@ -488,10 +557,22 @@
           <div class="score-title">Traditional PCER
             <span class="badge" id="badgeTradPcer">ACTIVE</span>
           </div>
-          <div class="metric-grid">
-            <div class="metric"><span>Avg Latency</span><span id="tradLatency" style="color:#d97706">0 ms</span></div>
-            <div class="metric loss"><span>Lost</span><span id="tradLoss" style="color:#d97706">0</span></div>
-            <div class="metric"><span>Sent</span><span id="tradDelivered" style="color:#0f172a">0</span></div>
+          <div class="metric-grid" style="grid-template-columns: 1fr 1fr">
+            <div class="metric"><span>Avg Latency</span><span id="tradLatency">0 ms</span></div>
+            <div class="metric"><span>Total Delivered</span><span id="tradDelivered" style="color:#0f172a">0</span>
+            </div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric" style="color:#dc2626"><span>C. Latency</span><span id="tradLat0">0 ms</span></div>
+            <div class="metric" style="color:#d97706"><span>S. Latency</span><span id="tradLat1">0 ms</span></div>
+            <div class="metric" style="color:#2563eb"><span>B. Latency</span><span id="tradLat2">0 ms</span></div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric loss" style="color:#dc2626"><span>Crit. Lost</span><span id="tradLoss0">0</span></div>
+            <div class="metric loss" style="color:#d97706"><span>Std. Lost</span><span id="tradLoss1">0</span></div>
+            <div class="metric loss" style="color:#2563eb"><span>Bulk Lost</span><span id="tradLoss2">0</span></div>
           </div>
         </div>
 
@@ -501,11 +582,22 @@
           <div class="score-title">Proposed PCER
             <span class="badge" id="badgePcer">ACTIVE</span>
           </div>
-          <div class="metric-grid">
-            <div class="metric"><span>Avg Crit. Latency</span><span id="pcerLatency" style="color:#166534">0 ms</span>
+          <div class="metric-grid" style="grid-template-columns: 1fr 1fr">
+            <div class="metric"><span>Avg Latency</span><span id="pcerLatency">0 ms</span></div>
+            <div class="metric"><span>Total Delivered</span><span id="pcerDelivered" style="color:#0f172a">0</span>
             </div>
-            <div class="metric loss"><span>Lost</span><span id="pcerLoss" style="color:#166534">0</span></div>
-            <div class="metric"><span>Sent</span><span id="pcerDelivered" style="color:#0f172a">0</span></div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric" style="color:#dc2626"><span>C. Latency</span><span id="pcerLat0">0 ms</span></div>
+            <div class="metric" style="color:#d97706"><span>S. Latency</span><span id="pcerLat1">0 ms</span></div>
+            <div class="metric" style="color:#2563eb"><span>B. Latency</span><span id="pcerLat2">0 ms</span></div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric loss" style="color:#dc2626"><span>Crit. Lost</span><span id="pcerLoss0">0</span></div>
+            <div class="metric loss" style="color:#d97706"><span>Std. Lost</span><span id="pcerLoss1">0</span></div>
+            <div class="metric loss" style="color:#2563eb"><span>Bulk Lost</span><span id="pcerLoss2">0</span></div>
           </div>
         </div>
       </div>
@@ -551,29 +643,34 @@
     const TAG_COLORS = ['#dc2626', '#d97706', '#2563eb'];
     const TAG_CLASS = ['critical', 'standard', 'bulk'];
 
-    // ─── 18-NODE BIDIRECTIONAL MESH ──────────────────────────
+    // ─── 18-NODE HERO SCENARIO MESH ──────────────────────────
     const nodeDefinitions = [
+      // ROUTER -> CLOUD
       { id: 0, label: "Router", icon: "🌐", type: "mains", initBat: 1.0 },
 
+      // TOP SLOW PATH (High Battery)
       { id: 1, label: "Smart TV", icon: "📺", type: "mains", initBat: 1.0 },
-      { id: 2, label: "Security Cam", icon: "📷", type: "fast", initBat: 0.20 }, 
-      { id: 3, label: "Smoke Alarm", icon: "🚨", type: "med", initBat: 0.8 },
-      { id: 4, label: "Laptop", icon: "💻", type: "mains", initBat: 1.0 },
+      { id: 2, label: "Laptop", icon: "💻", type: "mains", initBat: 1.0 },
+      { id: 3, label: "Fridge", icon: "🧊", type: "mains", initBat: 1.0 },
+      { id: 4, label: "AC Unit", icon: "❄️", type: "mains", initBat: 1.0 },
 
-      { id: 5, label: "Thermostat", icon: "🌡️", type: "med", initBat: 0.3 },
-      { id: 6, label: "Fridge", icon: "🧊", type: "mains", initBat: 1.0 }, 
-      { id: 7, label: "Doorbell", icon: "🚪", type: "med", initBat: 0.4 },
-      { id: 8, label: "Smart Watch", icon: "⌚", type: "fast", initBat: 0.15 }, 
+      // MIDDLE SUPER HIGHWAY (Low delay, critically low battery)
+      { id: 5, label: "Sensor", icon: "📡", type: "fast", initBat: 0.15 },
+      { id: 6, label: "HeartMon", icon: "🫀", type: "fast", initBat: 0.08 }, // ★ The Victim!
+      { id: 7, label: "Watch", icon: "⌚", type: "fast", initBat: 0.12 },
+      { id: 8, label: "Drone", icon: "🚁", type: "fast", initBat: 0.15 },
 
-      { id: 9, label: "Light Bulb", icon: "💡", type: "mains", initBat: 1.0 },
-      { id: 10, label: "Heart Mon.", icon: "🫀", type: "fast", initBat: 0.6 },
-      { id: 11, label: "AC Unit", icon: "❄️", type: "mains", initBat: 1.0 },
-      { id: 12, label: "Oven", icon: "♨️", type: "mains", initBat: 1.0 },
+      // BOTTOM SLOW PATH (High Battery)
+      { id: 9, label: "Bulb", icon: "💡", type: "mains", initBat: 1.0 },
+      { id: 10, label: "Oven", icon: "♨️", type: "mains", initBat: 1.0 },
+      { id: 11, label: "Speaker", icon: "🔊", type: "mains", initBat: 1.0 },
+      { id: 12, label: "Tablet", icon: "📱", type: "mains", initBat: 1.0 },
 
-      { id: 13, label: "Tablet", icon: "📱", type: "med", initBat: 0.5 },
-      { id: 14, label: "Speaker", icon: "🔊", type: "mains", initBat: 1.0 },
-      { id: 15, label: "Drone", icon: "🚁", type: "fast", initBat: 0.25 },
-      { id: 16, label: "Sensor", icon: "📡", type: "med", initBat: 0.7 },
+      // SCATTERED MESH
+      { id: 13, label: "Alarm", icon: "🚨", type: "med", initBat: 0.5 },
+      { id: 14, label: "Doorbell", icon: "🚪", type: "med", initBat: 0.5 },
+      { id: 15, label: "Therm", icon: "🌡️", type: "med", initBat: 0.5 },
+      { id: 16, label: "Cam", icon: "📷", type: "med", initBat: 0.5 },
 
       { id: 17, label: "Cloud", icon: "☁️", type: "mains", initBat: 1.0 }
     ];
@@ -581,20 +678,25 @@
     const NUM_NODES = 18;
 
     const edges = [
-      [0,1,10],[0,2,5],[0,3,15],[0,4,20],
-      [1,5,15],[2,6,10],[3,7,20],[4,8,15],
-      [5,9,20],[6,10,15],[7,11,10],[8,12,5],
-      [9,13,10],[10,14,20],[11,15,5],[12,16,10],
-      [13,17,20],[14,17,15],[15,17,10],[16,17,25],
-      [1,2,5], [2,3,10], [5,6,10], [7,8,10],
-      [9,10,5], [11,12,5], [13,14,10], [15,16,5],
-      [10,13,15], [11,16,10], [6,9,25], [3,8,5],
-      [9,1,20], [10,2,15], [16,12,5]
+      // Top Path (100ms total, safe)
+      [0, 1, 25], [1, 2, 25], [2, 3, 25], [3, 4, 25], [4, 17, 25],
+
+      // Middle Highway (20ms total, dangerous)
+      [0, 5, 5], [5, 6, 5], [6, 7, 5], [7, 8, 5], [8, 17, 5],
+
+      // Bottom Path (100ms total, safe)
+      [0, 9, 24], [9, 10, 24], [10, 11, 24], [11, 12, 24], [12, 17, 24],
+
+      // Inter-path mesh bridges (High delay)
+      [1, 5, 30], [2, 6, 30], [3, 7, 30], [4, 8, 30],
+      [5, 9, 30], [6, 10, 30], [7, 11, 30], [8, 12, 30],
+      [13, 2, 10], [5, 13, 10], [6, 14, 10], [10, 14, 10],
+      [7, 15, 10], [4, 15, 10]
     ];
 
     const adj = {};
     for (let i = 0; i < NUM_NODES; i++) adj[i] = [];
-    
+
     edges.forEach(e => {
       const u = e[0], v = e[1], d = e[2];
       adj[u].push({ node: v, delay: d });
@@ -613,9 +715,9 @@
     let flashes = []; // {x, y, text, age, color}
 
     const stats = {
-      baseline: { latSum: 0, count: 0, lost: 0 },
-      tradPcer: { latSum: 0, count: 0, lost: 0 },
-      pcer: { critLatSum: 0, critCount: 0, count: 0, lost: 0 }
+      baseline: { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] },
+      tradPcer: { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] },
+      pcer: { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] }
     };
 
     let canvas, ctx, W, H;
@@ -632,13 +734,16 @@
       const wAvail = W - paddingX * 2;
       const hAvail = Math.min(H * 0.8, 600);
 
-      // Distribute nodes over 6 columns (X) and 4 main layers (Y), plus Dest
       const layout = {
-        0:  [0, 0.5],
-        1:  [1, 0.15], 2:  [1, 0.4],  3:  [1, 0.65], 4:  [1, 0.9],
-        5:  [2, 0.1],  6:  [2, 0.35], 7:  [2, 0.6],  8:  [2, 0.85],
-        9:  [3, 0.15], 10: [3, 0.4],  11: [3, 0.65], 12: [3, 0.9],
-        13: [4, 0.1],  14: [4, 0.35], 15: [4, 0.6],  16: [4, 0.85],
+        0: [0, 0.5],
+        // Top Path
+        1: [1, 0.15], 2: [2, 0.15], 3: [3, 0.15], 4: [4, 0.15],
+        // Middle Path
+        5: [1, 0.5], 6: [2, 0.5], 7: [3, 0.5], 8: [4, 0.5],
+        // Bottom Path
+        9: [1, 0.85], 10: [2, 0.85], 11: [3, 0.85], 12: [4, 0.85],
+        // Scattered (between lines)
+        13: [1.5, 0.35], 14: [2.5, 0.65], 15: [3.5, 0.35], 16: [2.5, 0.35],
         17: [5, 0.5]
       };
 
@@ -656,74 +761,96 @@
       const delay = edge[2];
 
       if (protocol === 'baseline') return delay;
-      
+
       let w1 = 1, w2 = 1;
       if (tag === 0) { w1 = 100; w2 = 0; }
       else if (tag === 2) { w1 = 0; w2 = 100; }
-      
+
       if (protocol === 'pcer' && vNode.battery < 0.05 && vNode.id !== destId) return Infinity;
-      
+
       const eCost = vNode.battery > 0.0001 ? (1.0 / vNode.battery) : 10000;
       return (w1 * delay) + (w2 * eCost);
     }
 
     // Mathematically perfect Dijkstra ensures "no route" only fires when physically impossible
     function calculateBestPath(src, destId, protocol, tag) {
-        const dist = {}, prev = {};
-        const q = [];
-        for(let i=0; i<NUM_NODES; i++) {
-            dist[i] = Infinity; prev[i] = null; q.push(i);
-        }
-        dist[src] = 0;
-        
-        while(q.length > 0) {
-            let uIdx = 0;
-            for(let i=1; i<q.length; i++) if(dist[q[i]] < dist[q[uIdx]]) uIdx = i;
-            const u = q.splice(uIdx, 1)[0];
-            
-            if(u === destId || dist[u] === Infinity) break;
-            
-            adj[u].forEach(neighbor => {
-               if (!q.includes(neighbor.node)) return;
-               const vNode = nodes[neighbor.node];
-               if (vNode.battery <= 0 && vNode.id !== destId) return; 
-               
-               const cost = getEdgeCost(protocol, tag, u, vNode, destId);
-               if (cost === Infinity) return;
-               
-               if (dist[u] + cost < dist[neighbor.node]) {
-                   dist[neighbor.node] = dist[u] + cost;
-                   prev[neighbor.node] = u;
-               }
-            });
-        }
-        
-        if (prev[destId] === null) return { path: [], failed: true };
-        const path = [];
-        let curr = destId;
-        while(curr !== null) { path.unshift(curr); curr = prev[curr]; }
-        return { path, failed: false };
+      const dist = {}, prev = {};
+      const q = [];
+      for (let i = 0; i < NUM_NODES; i++) {
+        dist[i] = Infinity; prev[i] = null; q.push(i);
+      }
+      dist[src] = 0;
+
+      while (q.length > 0) {
+        let uIdx = 0;
+        for (let i = 1; i < q.length; i++) if (dist[q[i]] < dist[q[uIdx]]) uIdx = i;
+        const u = q.splice(uIdx, 1)[0];
+
+        if (u === destId || dist[u] === Infinity) break;
+
+        adj[u].forEach(neighbor => {
+          if (!q.includes(neighbor.node)) return;
+          const vNode = nodes[neighbor.node];
+          if (vNode.battery <= 0 && vNode.id !== destId) return;
+
+          const cost = getEdgeCost(protocol, tag, u, vNode, destId);
+          if (cost === Infinity) return;
+
+          if (dist[u] + cost < dist[neighbor.node]) {
+            dist[neighbor.node] = dist[u] + cost;
+            prev[neighbor.node] = u;
+          }
+        });
+      }
+
+      if (prev[destId] === null) return { path: [], failed: true };
+      const path = [];
+      let curr = destId;
+      while (curr !== null) { path.unshift(curr); curr = prev[curr]; }
+      return { path, failed: false };
     }
 
     // ─── PACKETS ─────────────────────────────────────────────
-    function spawnPacket(forcedTag = -1, forcedSrc = -1) {
-      const tag = forcedTag >= 0 ? forcedTag : [0, 1, 1, 2, 2][Math.floor(Math.random() * 5)];
+    let pregeneratedPackets = [];
+    let packetIndex = 0;
 
+    function generateTrafficPlan() {
+      let currentSeed = 1337;
+      function prand() {
+        currentSeed = (currentSeed * 9301 + 49297) % 233280;
+        return currentSeed / 233280;
+      }
+      pregeneratedPackets = [];
+      let scheduledTime = 0;
+      for (let i = 0; i < 5000; i++) {
+        const tag = [0, 1, 1, 2, 2][Math.floor(prand() * 5)];
+        let srcIdx, destIdx;
+        if (prand() < 0.8) {
+          srcIdx = 0;
+          destIdx = 17;
+        } else {
+          srcIdx = Math.floor(prand() * NUM_NODES);
+          do { destIdx = Math.floor(prand() * NUM_NODES); } while (destIdx === srcIdx);
+        }
+        scheduledTime += 0.3 + prand() * 0.6;
+        pregeneratedPackets.push({ time: scheduledTime, srcId: srcIdx, destId: destIdx, tag: tag });
+      }
+    }
+
+    function spawnManualPacket() {
       const activeNodes = nodes.filter(n => n.battery > 0);
       if (activeNodes.length < 2) return;
-      
-      const srcNode = forcedSrc >= 0 ? nodes[forcedSrc] : activeNodes[Math.floor(Math.random() * activeNodes.length)];
-      
-      let destNode;
-      if (Math.random() < 0.5) {
-         destNode = (srcNode.id !== 17 && Math.random() < 0.5) ? nodes[17] : nodes[0];
-         if (destNode.id === srcNode.id) destNode = activeNodes[Math.floor(Math.random() * activeNodes.length)];
-      } else {
-         do { destNode = nodes[Math.floor(Math.random() * nodes.length)]; } while (destNode.id === srcNode.id);
+      let srcNode = nodes[0];
+      let destNode = nodes[17];
+      if (srcNode.battery <= 0 || destNode.battery <= 0) {
+        srcNode = activeNodes[Math.floor(Math.random() * activeNodes.length)];
+        do { destNode = nodes[Math.floor(Math.random() * nodes.length)]; } while (destNode.id === srcNode.id);
       }
+      routeAndDispatchPacket(srcNode.id, destNode.id, 0); // Tag 0 Critical
+    }
 
-      const src = srcNode.id;
-      const destId = destNode.id;
+    function routeAndDispatchPacket(src, destId, tag) {
+      const srcNode = nodes[src];
 
       const { path, failed } = calculateBestPath(src, destId, protocol, tag);
 
@@ -731,16 +858,16 @@
         // True definitive NO ROUTE partition
         logEvent(`❌ ${TAG_NAMES[tag]} DROPPED at Source ${src} (NETWORK PARTITION)`, 'fail');
         flashes.push({ x: srcNode.x, y: srcNode.y - 45, text: `❌ NO ROUTE (Partition)`, age: 0, color: '#dc2626' });
-        
-        if (protocol === 'baseline') stats.baseline.lost++;
-        else if (protocol === 'trad-pcer') stats.tradPcer.lost++;
-        else stats.pcer.lost++;
+
+        if (protocol === 'baseline') stats.baseline.lost[tag]++;
+        else if (protocol === 'trad-pcer') stats.tradPcer.lost[tag]++;
+        else stats.pcer.lost[tag]++;
         updateScorecards();
         return;
       }
 
       let routeCost = 0;
-      for(let i=0; i<path.length-1; i++) routeCost += getDelay(path[i], path[i+1]);
+      for (let i = 0; i < path.length - 1; i++) routeCost += getDelay(path[i], path[i + 1]);
 
       const p = {
         tag,
@@ -780,9 +907,12 @@
         }
       });
 
-      if (simTime >= nextSpawnTime) {
-        spawnPacket();
-        nextSpawnTime = simTime + 0.3 + Math.random() * 0.6; 
+      while (packetIndex < pregeneratedPackets.length && simTime >= pregeneratedPackets[packetIndex].time) {
+        const planned = pregeneratedPackets[packetIndex];
+        if (nodes[planned.srcId].battery > 0) {
+          routeAndDispatchPacket(planned.srcId, planned.destId, planned.tag);
+        }
+        packetIndex++;
       }
 
       const speedScale = 2.0;
@@ -813,11 +943,12 @@
             // A node along the established path died while we were travelling!
             const nextNode = nodes[p.path[p.currentPathIdx + 1]];
             if (nextNode && nextNode.battery <= 0 && nextNode.id !== p.destId) {
-               p.alive = false;
-               p.failedAt = p.path[p.currentPathIdx];
-               p.failReason = 'dead';
-               recordStat(p, false);
-               flashes.push({ x: nodes[p.failedAt].x, y: nodes[p.failedAt].y - 45, text: `❌ DEAD PATH`, age: 0, color: '#dc2626' });
+              p.alive = false;
+              p.failedAt = p.path[p.currentPathIdx];
+              p.deadNextHop = nextNode.id;
+              p.failReason = 'dead';
+              recordStat(p, false);
+              flashes.push({ x: nodes[p.failedAt].x, y: nodes[p.failedAt].y - 45, text: `❌ DEAD PATH`, age: 0, color: '#dc2626' });
             }
           }
         }
@@ -826,7 +957,7 @@
       for (const p of packets) {
         for (const t of p.trail) t.age += dt;
       }
-      
+
       for (const f of flashes) f.age += dt;
 
       packets = packets.filter(p => p.alive || p.trail.some(t => t.age < 0.5));
@@ -838,27 +969,24 @@
         // Find which portion of the path we actually survived to print it correctly
         const survivedPath = packet.path.slice(0, packet.currentPathIdx + 1);
         const pathStr = survivedPath.join('→') + ' ✖';
-        const reasonStr = packet.failReason === 'no_route' ? 'PARTITION' : 'NODE DEAD';
-        logEvent(`❌ ${TAG_NAMES[packet.tag]} (to ${packet.destId}) dropped at Node ${packet.failedAt} (${reasonStr}). Path: ${pathStr}`, 'fail');
+        const reasonStr = packet.failReason === 'no_route' ? 'PARTITION' : `NEXT HOP NODE ${packet.deadNextHop} IS DEAD`;
+        logEvent(`❌ ${TAG_NAMES[packet.tag]} (to ${packet.destId}) halted at Node ${packet.failedAt} (${reasonStr}). Path: ${pathStr}`, 'fail');
       } else {
         const pathStr = packet.path.join('→');
         logEvent(`✅ ${TAG_NAMES[packet.tag]} (to ${packet.destId}) delivered cleanly! (${packet.latency}ms). Path: ${pathStr}`, TAG_CLASS[packet.tag]);
       }
 
       if (protocol === 'baseline') {
-        if (success) { stats.baseline.count++; stats.baseline.latSum += packet.latency; }
-        else { stats.baseline.lost++; }
+        if (success) { stats.baseline.count[packet.tag]++; stats.baseline.sum[packet.tag] += packet.latency; }
+        else { stats.baseline.lost[packet.tag]++; }
       }
       else if (protocol === 'trad-pcer') {
-        if (success) { stats.tradPcer.count++; stats.tradPcer.latSum += packet.latency; }
-        else { stats.tradPcer.lost++; }
+        if (success) { stats.tradPcer.count[packet.tag]++; stats.tradPcer.sum[packet.tag] += packet.latency; }
+        else { stats.tradPcer.lost[packet.tag]++; }
       }
       else {
-        if (success) {
-          stats.pcer.count++;
-          if (packet.tag === 0) { stats.pcer.critCount++; stats.pcer.critLatSum += packet.latency; }
-        }
-        else { stats.pcer.lost++; }
+        if (success) { stats.pcer.count[packet.tag]++; stats.pcer.sum[packet.tag] += packet.latency; }
+        else { stats.pcer.lost[packet.tag]++; }
       }
       updateScorecards();
     }
@@ -878,15 +1006,15 @@
       let pName = protocol === 'baseline' ? 'OSPF' : (protocol === 'trad-pcer' ? 'Trad. PCER' : 'Proposed PCER');
       let html = `<div style="font-size:11px;margin-bottom:8px;color:#8b9cb3">Sent <b style="color:${TAG_COLORS[packet.tag]}">${TAG_NAMES[packet.tag]}</b> via ${pName}:</div>`;
 
-      for(let i=1; i<path.length; i++) {
+      for (let i = 1; i < path.length; i++) {
         const a = path[i];
         html += `<div class="cost-row">
-      <span>→ Node ${a} ${nodes[a]?nodes[a].icon:''}</span>
-      <span>${getDelay(path[i-1], a)}ms</span>
+      <span>→ Node ${a} ${nodes[a] ? nodes[a].icon : ''}</span>
+      <span>${getDelay(path[i - 1], a)}ms</span>
     </div>`;
       }
-      if(path.length === 0) {
-          html += `<div class="cost-row dead"><span>❌ NO ROUTE FOUND</span></div>`;
+      if (path.length === 0) {
+        html += `<div class="cost-row dead"><span>❌ NO ROUTE FOUND</span></div>`;
       }
 
       rows.innerHTML = html;
@@ -898,17 +1026,38 @@
       const t = stats.tradPcer;
       const p = stats.pcer;
 
-      document.getElementById('baseLatency').textContent = b.count > 0 ? (b.latSum / b.count).toFixed(1) + ' ms' : '0 ms';
-      document.getElementById('baseLoss').textContent = b.lost;
-      document.getElementById('baseDelivered').textContent = b.count;
+      const totBaseCnt = b.count[0] + b.count[1] + b.count[2];
+      const totBaseSum = b.sum[0] + b.sum[1] + b.sum[2];
+      document.getElementById('baseLatency').textContent = totBaseCnt > 0 ? (totBaseSum / totBaseCnt).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('baseLat0').textContent = b.count[0] > 0 ? (b.sum[0] / b.count[0]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('baseLat1').textContent = b.count[1] > 0 ? (b.sum[1] / b.count[1]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('baseLat2').textContent = b.count[2] > 0 ? (b.sum[2] / b.count[2]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('baseLoss0').textContent = b.lost[0];
+      document.getElementById('baseLoss1').textContent = b.lost[1];
+      document.getElementById('baseLoss2').textContent = b.lost[2];
+      document.getElementById('baseDelivered').textContent = totBaseCnt;
 
-      document.getElementById('tradLatency').textContent = t.count > 0 ? (t.latSum / t.count).toFixed(1) + ' ms' : '0 ms';
-      document.getElementById('tradLoss').textContent = t.lost;
-      document.getElementById('tradDelivered').textContent = t.count;
+      const totTradCnt = t.count[0] + t.count[1] + t.count[2];
+      const totTradSum = t.sum[0] + t.sum[1] + t.sum[2];
+      document.getElementById('tradLatency').textContent = totTradCnt > 0 ? (totTradSum / totTradCnt).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('tradLat0').textContent = t.count[0] > 0 ? (t.sum[0] / t.count[0]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('tradLat1').textContent = t.count[1] > 0 ? (t.sum[1] / t.count[1]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('tradLat2').textContent = t.count[2] > 0 ? (t.sum[2] / t.count[2]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('tradLoss0').textContent = t.lost[0];
+      document.getElementById('tradLoss1').textContent = t.lost[1];
+      document.getElementById('tradLoss2').textContent = t.lost[2];
+      document.getElementById('tradDelivered').textContent = totTradCnt;
 
-      document.getElementById('pcerLatency').textContent = p.critCount > 0 ? (p.critLatSum / p.critCount).toFixed(1) + ' ms' : '0 ms';
-      document.getElementById('pcerLoss').textContent = p.lost;
-      document.getElementById('pcerDelivered').textContent = p.count;
+      const totPcerCnt = p.count[0] + p.count[1] + p.count[2];
+      const totPcerSum = p.sum[0] + p.sum[1] + p.sum[2];
+      document.getElementById('pcerLatency').textContent = totPcerCnt > 0 ? (totPcerSum / totPcerCnt).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('pcerLat0').textContent = p.count[0] > 0 ? (p.sum[0] / p.count[0]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('pcerLat1').textContent = p.count[1] > 0 ? (p.sum[1] / p.count[1]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('pcerLat2').textContent = p.count[2] > 0 ? (p.sum[2] / p.count[2]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('pcerLoss0').textContent = p.lost[0];
+      document.getElementById('pcerLoss1').textContent = p.lost[1];
+      document.getElementById('pcerLoss2').textContent = p.lost[2];
+      document.getElementById('pcerDelivered').textContent = totPcerCnt;
     }
 
     // ─── RENDER ──────────────────────────────────────────────
@@ -1046,13 +1195,29 @@
       });
 
       const pName = p === 'baseline' ? 'OSPF Baseline' : (p === 'trad-pcer' ? 'Traditional PCER' : 'Proposed PCER');
-      logEvent(`<b>Protocol switched to ${pName}</b>`, "");
+
+      // RESET NETWORK STATE FOR NEW PROTOCOL TO ENSURE ISOLATED COMPARISON
+      playing = false;
+      document.getElementById('btnPlay').style.display = '';
+      document.getElementById('btnPause').style.display = 'none';
+
+      initNodes();
+      packets = [];
+      simTime = 0;
+      packetIndex = 0;
+      stats.baseline = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
+      stats.tradPcer = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
+      stats.pcer = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
+      updateScorecards();
+      document.getElementById('eventLog').innerHTML = '';
+      logEvent(`<b>Protocol switched to ${pName}. Network reset to initial state.</b>`, "");
     }
 
     function init() {
       canvas = document.getElementById('networkCanvas');
       ctx = canvas.getContext('2d');
 
+      generateTrafficPlan();
       initNodes();
       resize();
       window.addEventListener('resize', resize);
@@ -1073,17 +1238,17 @@
       };
       document.getElementById('btnReset').onclick = () => {
         initNodes();
-        packets = []; 
-        simTime = 0; 
-        nextSpawnTime = 0;
-        stats.baseline = { latSum: 0, count: 0, lost: 0 };
-        stats.tradPcer = { latSum: 0, count: 0, lost: 0 };
-        stats.pcer = { critLatSum: 0, critCount: 0, count: 0, lost: 0 };
+        packets = [];
+        simTime = 0;
+        packetIndex = 0;
+        stats.baseline = { latSum: 0, count: 0, lost: [0, 0, 0] };
+        stats.tradPcer = { latSum: 0, count: 0, lost: [0, 0, 0] };
+        stats.pcer = { critLatSum: 0, critCount: 0, count: 0, lost: [0, 0, 0] };
         updateScorecards();
         document.getElementById('eventLog').innerHTML = '';
         logEvent('Network reset. Battery fully charged.');
       };
-      document.getElementById('btnManualCrit').onclick = () => spawnPacket(0); // Tag 0 Critical
+      document.getElementById('btnManualCrit').onclick = () => spawnManualPacket(); // Tag 0 Critical
 
       const slider = document.getElementById('speedSlider');
       const speeds = [0.5, 1, 2, 4];
