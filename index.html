@@ -27,8 +27,9 @@
     .app {
       display: grid;
       grid-template-columns: 1fr 360px;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto minmax(0, 1fr) auto;
       height: 100vh;
+      min-height: 800px;
       gap: 0
     }
 
@@ -152,11 +153,16 @@
       border-left: 2px solid #e2e8f0;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
+      height: 100%;
+      min-height: 0;
     }
+    .sidebar::-webkit-scrollbar { width: 6px; }
+    .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
     .sidebar-section {
-      padding: 16px 24px;
+      padding: 12px 18px;
       border-bottom: 2px solid #e2e8f0
     }
 
@@ -174,8 +180,8 @@
       background: #f1f5f9;
       border: 1px solid #cbd5e1;
       border-radius: 12px;
-      padding: 14px 18px;
-      margin-bottom: 10px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
       position: relative;
       overflow: hidden;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -186,10 +192,10 @@
     .score-card.pcer { border-left: 6px solid #22c55e }
 
     .score-title {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 800;
       color: #1e293b;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center
@@ -279,17 +285,29 @@
       padding: 12px
     }
 
+    #costRows {
+      max-height: 100px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      padding-right: 4px;
+    }
+    
+    #costRows::-webkit-scrollbar { width: 6px; }
+    #costRows::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
     /* Event Log */
     .event-log {
       flex: 1;
-      overflow-y: auto;
-      padding: 16px 24px;
+      overflow-y: scroll;
+      padding: 12px 18px;
       scrollbar-width: thin;
-      scrollbar-color: #cbd5e1 transparent
+      scrollbar-color: #cbd5e1 #f1f5f9;
+      min-height: 150px;
     }
 
-    .event-log::-webkit-scrollbar { width: 6px }
-    .event-log::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px }
+    .event-log::-webkit-scrollbar { width: 8px; }
+    .event-log::-webkit-scrollbar-track { background: #f1f5f9; }
+    .event-log::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; border: 1px solid #f1f5f9; }
 
     .log-entry {
       font-size: 12px;
@@ -493,7 +511,7 @@
       </div>
 
       <div class="sidebar-section">
-        <h3>Live Routing Analysis</h3>
+        <h3>Live Routing Path</h3>
         <div id="costRows">
           <div class="empty-state">Waiting for packet...</div>
         </div>
@@ -525,7 +543,7 @@
 
   <script>
     // ═════════════════════════════════════════════════════════
-    // 18-NODE BIDIRECTIONAL MESH IoT SIMULATION
+    // 18-NODE MESH MULTI-DIRECTIONAL IoT SIMULATION
     // ═════════════════════════════════════════════════════════
 
     const TAG = { CRITICAL: 0, STANDARD: 1, BULK: 2 };
@@ -560,45 +578,28 @@
       { id: 17, label: "Cloud", icon: "☁️", type: "mains", initBat: 1.0 }
     ];
 
-    const DEST = 17;
+    const NUM_NODES = 18;
 
     const edges = [
-      // Spoking out from Router
       [0,1,10],[0,2,5],[0,3,15],[0,4,20],
-      
-      // Horizontal connections
       [1,5,15],[2,6,10],[3,7,20],[4,8,15],
       [5,9,20],[6,10,15],[7,11,10],[8,12,5],
       [9,13,10],[10,14,20],[11,15,5],[12,16,10],
-      
-      // Towards destination
       [13,17,20],[14,17,15],[15,17,10],[16,17,25],
-
-      // Vertical + Diagonal cross-links to make it a dense true mesh
       [1,2,5], [2,3,10], [5,6,10], [7,8,10],
       [9,10,5], [11,12,5], [13,14,10], [15,16,5],
-      [10,13,15], [11,16,10], [6,9,25], [3,8,5]
+      [10,13,15], [11,16,10], [6,9,25], [3,8,5],
+      [9,1,20], [10,2,15], [16,12,5]
     ];
 
-    // True Bidirectional Adjacency
     const adj = {};
+    for (let i = 0; i < NUM_NODES; i++) adj[i] = [];
+    
     edges.forEach(e => {
-      if (!adj[e[0]]) adj[e[0]] = [];
-      if (!adj[e[1]]) adj[e[1]] = [];
-      adj[e[0]].push({ node: e[1], delay: e[2] });
-      adj[e[1]].push({ node: e[0], delay: e[2] });
+      const u = e[0], v = e[1], d = e[2];
+      adj[u].push({ node: v, delay: d });
+      adj[v].push({ node: u, delay: d });
     });
-
-    // Precompute shortest paths delays ignoring energy via Bellman-Ford
-    const delayToDest = {};
-    for (let i = 0; i <= DEST; i++) delayToDest[i] = 10000;
-    delayToDest[DEST] = 0;
-    for (let v = 0; v < 18; v++) {
-      for (const e of edges) {
-        if (delayToDest[e[1]] + e[2] < delayToDest[e[0]]) delayToDest[e[0]] = delayToDest[e[1]] + e[2];
-        if (delayToDest[e[0]] + e[2] < delayToDest[e[1]]) delayToDest[e[1]] = delayToDest[e[0]] + e[2];
-      }
-    }
 
     // ─── STATE ───────────────────────────────────────────────
     let nodes = [];
@@ -609,6 +610,7 @@
     let protocol = 'baseline'; // 'baseline', 'trad-pcer', 'pcer'
     let nextSpawnTime = 0;
     let lastFrameTime = 0;
+    let flashes = []; // {x, y, text, age, color}
 
     const stats = {
       baseline: { latSum: 0, count: 0, lost: 0 },
@@ -647,111 +649,114 @@
       });
     }
 
-    // ─── COST CALCULATION ────────────────────────────────────
-    function getCost(protocol, tag, u, vNode) {
+    // ─── COST CALCULATION & DIJKSTRA PATHFINDING ─────────────
+    function getEdgeCost(protocol, tag, u, vNode, destId) {
       const edge = edges.find(e => (e[0] === u && e[1] === vNode.id) || (e[1] === u && e[0] === vNode.id));
       if (!edge) return Infinity;
-      const delayFromUtoV = edge[2];
-      const totalDelay = delayFromUtoV + delayToDest[vNode.id];
+      const delay = edge[2];
 
-      if (protocol === 'baseline') {
-        // OSFP Baseline: delay only. Ignores tags and battery completely.
-        return totalDelay;
-      }
-      else if (protocol === 'trad-pcer') {
-        // Traditional PCER: factors in battery but lacks strict survival threshold and TAGS
-        let w1 = 1, w2 = 1; // Constant weights for all packets
-        const energyCost = vNode.battery > 0.0001 ? (1.0 / vNode.battery) : 10000;
-        return (w1 * totalDelay) + (w2 * energyCost);
-      }
-      else {
-        // Proposed PCER: Tag-aware dynamic weights
-        if (vNode.battery < 0.05 && vNode.id !== DEST) return Infinity;
-        let w1 = 1, w2 = 1;
-        if (tag === 0) { w1 = 100; w2 = 0; } // Critical: pure speed
-        else if (tag === 2) { w1 = 0; w2 = 100; } // Bulk: pure energy
-
-        const energyCost = vNode.battery > 0.0001 ? (1.0 / vNode.battery) : 10000;
-        return (w1 * totalDelay) + (w2 * energyCost);
-      }
+      if (protocol === 'baseline') return delay;
+      
+      let w1 = 1, w2 = 1;
+      if (tag === 0) { w1 = 100; w2 = 0; }
+      else if (tag === 2) { w1 = 0; w2 = 100; }
+      
+      if (protocol === 'pcer' && vNode.battery < 0.05 && vNode.id !== destId) return Infinity;
+      
+      const eCost = vNode.battery > 0.0001 ? (1.0 / vNode.battery) : 10000;
+      return (w1 * delay) + (w2 * eCost);
     }
 
-    function findBestHop(currentNodeId, tag, visited) {
-      if (currentNodeId === DEST) return null;
-      const neighbors = adj[currentNodeId].map(a => a.node);
-
-      let bestId = -1, bestCost = Infinity;
-      let analysis = [];
-
-      neighbors.forEach(nid => {
-        // PREVENT INFINITE LOOPS IN BIDIRECTIONAL GRAPH
-        // We no longer strictly enforce X coordinates to allow visually realistic U-turns and backtracking around blockages!
-        if (visited.has(nid)) return; 
-
-        const nNode = nodes[nid];
-        const cost = getCost(protocol, tag, currentNodeId, nNode);
-        analysis.push({ id: nid, cost });
-        if (cost < bestCost) {
-          bestCost = cost;
-          bestId = nid;
+    // Mathematically perfect Dijkstra ensures "no route" only fires when physically impossible
+    function calculateBestPath(src, destId, protocol, tag) {
+        const dist = {}, prev = {};
+        const q = [];
+        for(let i=0; i<NUM_NODES; i++) {
+            dist[i] = Infinity; prev[i] = null; q.push(i);
         }
-      });
-
-      return { id: bestId, cost: bestCost, analysis };
+        dist[src] = 0;
+        
+        while(q.length > 0) {
+            let uIdx = 0;
+            for(let i=1; i<q.length; i++) if(dist[q[i]] < dist[q[uIdx]]) uIdx = i;
+            const u = q.splice(uIdx, 1)[0];
+            
+            if(u === destId || dist[u] === Infinity) break;
+            
+            adj[u].forEach(neighbor => {
+               if (!q.includes(neighbor.node)) return;
+               const vNode = nodes[neighbor.node];
+               if (vNode.battery <= 0 && vNode.id !== destId) return; 
+               
+               const cost = getEdgeCost(protocol, tag, u, vNode, destId);
+               if (cost === Infinity) return;
+               
+               if (dist[u] + cost < dist[neighbor.node]) {
+                   dist[neighbor.node] = dist[u] + cost;
+                   prev[neighbor.node] = u;
+               }
+            });
+        }
+        
+        if (prev[destId] === null) return { path: [], failed: true };
+        const path = [];
+        let curr = destId;
+        while(curr !== null) { path.unshift(curr); curr = prev[curr]; }
+        return { path, failed: false };
     }
 
     // ─── PACKETS ─────────────────────────────────────────────
     function spawnPacket(forcedTag = -1, forcedSrc = -1) {
       const tag = forcedTag >= 0 ? forcedTag : [0, 1, 1, 2, 2][Math.floor(Math.random() * 5)];
 
-      // Pick a random source node to diversify traffic
-      const sourceCandidates = [0, 1, 2, 5, 9, 13];
-      const availableSources = sourceCandidates.filter(id => nodes[id].battery > 0);
-      if (availableSources.length === 0) return;
-      const src = forcedSrc >= 0 ? forcedSrc : availableSources[Math.floor(Math.random() * availableSources.length)];
-
-      const path = [src];
-      const visited = new Set([src]); // Track path to prevent loops
-      let current = src;
-      let routeCost = 0;
-      let firstHopAnalysis = null;
-      let failReason = null;
-
-      while (current !== DEST) {
-        const hop = findBestHop(current, tag, visited);
-        if (current === src) firstHopAnalysis = hop.analysis;
-
-        if (hop.cost === Infinity || hop.id === -1) {
-          failReason = 'no_route';
-          break;
-        }
-
-        // Baseline logic specifically dies here if it routes into a dead node blindly
-        if (nodes[hop.id].battery <= 0 && hop.id !== DEST) {
-          path.push(hop.id);
-          failReason = 'dead';
-          break;
-        }
-
-        path.push(hop.id);
-        visited.add(hop.id);
-        routeCost += getDelay(current, hop.id);
-        current = hop.id;
+      const activeNodes = nodes.filter(n => n.battery > 0);
+      if (activeNodes.length < 2) return;
+      
+      const srcNode = forcedSrc >= 0 ? nodes[forcedSrc] : activeNodes[Math.floor(Math.random() * activeNodes.length)];
+      
+      let destNode;
+      if (Math.random() < 0.5) {
+         destNode = (srcNode.id !== 17 && Math.random() < 0.5) ? nodes[17] : nodes[0];
+         if (destNode.id === srcNode.id) destNode = activeNodes[Math.floor(Math.random() * activeNodes.length)];
+      } else {
+         do { destNode = nodes[Math.floor(Math.random() * nodes.length)]; } while (destNode.id === srcNode.id);
       }
 
+      const src = srcNode.id;
+      const destId = destNode.id;
+
+      const { path, failed } = calculateBestPath(src, destId, protocol, tag);
+
+      if (failed) {
+        // True definitive NO ROUTE partition
+        logEvent(`❌ ${TAG_NAMES[tag]} DROPPED at Source ${src} (NETWORK PARTITION)`, 'fail');
+        flashes.push({ x: srcNode.x, y: srcNode.y - 45, text: `❌ NO ROUTE (Partition)`, age: 0, color: '#dc2626' });
+        
+        if (protocol === 'baseline') stats.baseline.lost++;
+        else if (protocol === 'trad-pcer') stats.tradPcer.lost++;
+        else stats.pcer.lost++;
+        updateScorecards();
+        return;
+      }
+
+      let routeCost = 0;
+      for(let i=0; i<path.length-1; i++) routeCost += getDelay(path[i], path[i+1]);
+
       const p = {
-        tag, path,
+        tag,
+        path,
+        destId,
         currentPathIdx: 0,
         progress: 0,
         alive: true,
-        failedAt: failReason ? path[path.length - 1] : -1,
-        failReason: failReason,
+        failedAt: -1,
+        failReason: null,
         latency: routeCost,
         trail: []
       };
 
       packets.push(p);
-      updateSidebar(p, firstHopAnalysis, path);
+      updateSidebarPath(p, path);
     }
 
     function getDelay(u, v) {
@@ -777,7 +782,7 @@
 
       if (simTime >= nextSpawnTime) {
         spawnPacket();
-        nextSpawnTime = simTime + 0.3 + Math.random() * 0.6; // High density traffic
+        nextSpawnTime = simTime + 0.3 + Math.random() * 0.6; 
       }
 
       const speedScale = 2.0;
@@ -800,12 +805,20 @@
           p.currentPathIdx++;
           p.progress = 0;
 
-          if (p.path[p.currentPathIdx] === p.failedAt) {
-            p.alive = false;
-            recordStat(p, false);
-          } else if (p.currentPathIdx >= p.path.length - 1) {
+          if (p.currentPathIdx >= p.path.length - 1) {
             p.alive = false;
             recordStat(p, true);
+            flashes.push({ x: nodes[p.destId].x, y: nodes[p.destId].y - 45, text: `✅ DELIVERED`, age: 0, color: '#166534' });
+          } else {
+            // A node along the established path died while we were travelling!
+            const nextNode = nodes[p.path[p.currentPathIdx + 1]];
+            if (nextNode && nextNode.battery <= 0 && nextNode.id !== p.destId) {
+               p.alive = false;
+               p.failedAt = p.path[p.currentPathIdx];
+               p.failReason = 'dead';
+               recordStat(p, false);
+               flashes.push({ x: nodes[p.failedAt].x, y: nodes[p.failedAt].y - 45, text: `❌ DEAD PATH`, age: 0, color: '#dc2626' });
+            }
           }
         }
       }
@@ -813,11 +826,25 @@
       for (const p of packets) {
         for (const t of p.trail) t.age += dt;
       }
+      
+      for (const f of flashes) f.age += dt;
 
       packets = packets.filter(p => p.alive || p.trail.some(t => t.age < 0.5));
+      flashes = flashes.filter(f => f.age < 1.5);
     }
 
     function recordStat(packet, success) {
+      if (!success) {
+        // Find which portion of the path we actually survived to print it correctly
+        const survivedPath = packet.path.slice(0, packet.currentPathIdx + 1);
+        const pathStr = survivedPath.join('→') + ' ✖';
+        const reasonStr = packet.failReason === 'no_route' ? 'PARTITION' : 'NODE DEAD';
+        logEvent(`❌ ${TAG_NAMES[packet.tag]} (to ${packet.destId}) dropped at Node ${packet.failedAt} (${reasonStr}). Path: ${pathStr}`, 'fail');
+      } else {
+        const pathStr = packet.path.join('→');
+        logEvent(`✅ ${TAG_NAMES[packet.tag]} (to ${packet.destId}) delivered cleanly! (${packet.latency}ms). Path: ${pathStr}`, TAG_CLASS[packet.tag]);
+      }
+
       if (protocol === 'baseline') {
         if (success) { stats.baseline.count++; stats.baseline.latSum += packet.latency; }
         else { stats.baseline.lost++; }
@@ -846,42 +873,24 @@
       if (log.children.length > 50) log.removeChild(log.lastChild);
     }
 
-    function updateSidebar(packet, analysis, path) {
+    function updateSidebarPath(packet, path) {
       const rows = document.getElementById('costRows');
-      if (!analysis) return;
-
-      const isFailed = packet.failedAt !== -1;
-      const bestId = isFailed ? -1 : path[1];
-
       let pName = protocol === 'baseline' ? 'OSPF' : (protocol === 'trad-pcer' ? 'Trad. PCER' : 'Proposed PCER');
       let html = `<div style="font-size:11px;margin-bottom:8px;color:#8b9cb3">Sent <b style="color:${TAG_COLORS[packet.tag]}">${TAG_NAMES[packet.tag]}</b> via ${pName}:</div>`;
 
-      analysis.forEach(a => {
-        const isBest = a.id === bestId;
-        const isDead = nodes[a.id] && nodes[a.id].battery <= 0;
-
-        let costCls = isBest ? 'best' : '';
-        if (protocol === 'baseline' && isBest && isDead) costCls = 'dead';
-        if (a.cost === Infinity) costCls = 'dead';
-
-        let cStr = a.cost === Infinity ? 'Avoided' : a.cost.toFixed(0);
-        html += `<div class="cost-row ${costCls}">
-      <span>→ Node ${a.id} ${nodes[a.id]?nodes[a.id].icon:''}</span>
-      <span>${cStr}</span>
+      for(let i=1; i<path.length; i++) {
+        const a = path[i];
+        html += `<div class="cost-row">
+      <span>→ Node ${a} ${nodes[a]?nodes[a].icon:''}</span>
+      <span>${getDelay(path[i-1], a)}ms</span>
     </div>`;
-      });
+      }
+      if(path.length === 0) {
+          html += `<div class="cost-row dead"><span>❌ NO ROUTE FOUND</span></div>`;
+      }
 
       rows.innerHTML = html;
-
-      if (isFailed) {
-        if (packet.failReason === 'no_route') {
-          logEvent(`${TAG_NAMES[packet.tag]} DROPPED. No route forward from Node ${packet.failedAt}!`, 'fail');
-        } else {
-          logEvent(`${TAG_NAMES[packet.tag]} DROPPED. Node ${packet.failedAt} is dead!`, 'fail');
-        }
-      } else {
-        logEvent(`${TAG_NAMES[packet.tag]} routed via ${path.join('→')}`, TAG_CLASS[packet.tag]);
-      }
+      logEvent(`Dispatching ${TAG_NAMES[packet.tag]} to Dest ${packet.destId} (Resolved Path: ${path.join('→')})`, TAG_CLASS[packet.tag]);
     }
 
     function updateScorecards() {
@@ -967,7 +976,7 @@
 
         ctx.font = 'bold 9px Inter';
         ctx.fillStyle = isDead ? '#dc2626' : '#1e293b';
-        ctx.fillText(n.id === 0 ? "Src" : n.id === DEST ? "Dest" : n.id, n.x, n.y - 28);
+        ctx.fillText(n.id === 0 ? "Router" : n.id === 17 ? "Cloud" : n.id, n.x, n.y - 28);
 
         if (n.type !== 'mains') {
           const bw = 24, bh = 5;
@@ -984,6 +993,19 @@
             ctx.fillStyle = '#ef4444'; ctx.font = 'bold 16px Arial';
             ctx.fillText("✖", n.x, n.y);
           }
+        }
+      }
+
+      // Flashes
+      for (const f of flashes) {
+        const a = Math.max(0, 1 - f.age / 1.5);
+        if (a > 0) {
+          ctx.globalAlpha = a;
+          ctx.fillStyle = f.color;
+          ctx.font = 'bold 13px Inter';
+          ctx.textAlign = 'center';
+          ctx.fillText(f.text, f.x, f.y - (f.age * 20));
+          ctx.globalAlpha = 1;
         }
       }
     }
