@@ -5,7 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PCER Mesh Overhaul — IoT Routing Demo</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet">
   <style>
     /* ── RESET & BASE ────────────────────────────────── */
     * {
@@ -97,7 +99,7 @@
       top: 4px;
       bottom: 4px;
       left: 4px;
-      width: calc(33.33% - 4px);
+      width: calc(25% - 4px);
       background: #ffffff;
       border-radius: 24px;
       z-index: 1;
@@ -121,6 +123,12 @@
       background: #dcfce7;
       border: 2px solid #22c55e;
       transform: translateX(calc(200% + 4px))
+    }
+
+    .toggle-wrapper[data-mode="rpl"] .toggle-pill {
+      background: #ede9fe;
+      border: 2px solid #8b5cf6;
+      transform: translateX(calc(300% + 6px))
     }
 
     /* ── CANVAS ──────────────────────────────────────── */
@@ -158,8 +166,15 @@
       height: 100%;
       min-height: 0;
     }
-    .sidebar::-webkit-scrollbar { width: 6px; }
-    .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
 
     .sidebar-section {
       padding: 12px 18px;
@@ -184,12 +199,24 @@
       margin-bottom: 8px;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
-    .score-card.baseline { border-left: 6px solid #ef4444 }
-    .score-card.trad-pcer { border-left: 6px solid #eab308 }
-    .score-card.pcer { border-left: 6px solid #22c55e }
+    .score-card.baseline {
+      border-left: 6px solid #ef4444
+    }
+
+    .score-card.trad-pcer {
+      border-left: 6px solid #eab308
+    }
+
+    .score-card.pcer {
+      border-left: 6px solid #22c55e
+    }
+
+    .score-card.rpl {
+      border-left: 6px solid #8b5cf6
+    }
 
     .score-title {
       font-size: 14px;
@@ -216,9 +243,21 @@
       color: #fff;
     }
 
-    .score-card.baseline .badge.active { background: #ef4444; }
-    .score-card.trad-pcer .badge.active { background: #eab308; }
-    .score-card.pcer .badge.active { background: #22c55e; }
+    .score-card.baseline .badge.active {
+      background: #ef4444;
+    }
+
+    .score-card.trad-pcer .badge.active {
+      background: #eab308;
+    }
+
+    .score-card.pcer .badge.active {
+      background: #22c55e;
+    }
+
+    .score-card.rpl .badge.active {
+      background: #8b5cf6;
+    }
 
     .metric-grid {
       display: grid;
@@ -291,9 +330,15 @@
       scrollbar-width: thin;
       padding-right: 4px;
     }
-    
-    #costRows::-webkit-scrollbar { width: 6px; }
-    #costRows::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+    #costRows::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #costRows::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
 
     /* Event Log */
     .event-log {
@@ -305,9 +350,19 @@
       min-height: 150px;
     }
 
-    .event-log::-webkit-scrollbar { width: 8px; }
-    .event-log::-webkit-scrollbar-track { background: #f1f5f9; }
-    .event-log::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; border: 1px solid #f1f5f9; }
+    .event-log::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .event-log::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    .event-log::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+      border: 1px solid #f1f5f9;
+    }
 
     .log-entry {
       font-size: 12px;
@@ -320,10 +375,25 @@
       color: #334155;
     }
 
-    .log-entry .time { color: #64748b }
-    .log-entry .critical { color: #dc2626; font-weight: 800; }
-    .log-entry .standard { color: #d97706; font-weight: 800; }
-    .log-entry .bulk { color: #2563eb; font-weight: 800; }
+    .log-entry .time {
+      color: #64748b
+    }
+
+    .log-entry .critical {
+      color: #dc2626;
+      font-weight: 800;
+    }
+
+    .log-entry .standard {
+      color: #d97706;
+      font-weight: 800;
+    }
+
+    .log-entry .bulk {
+      color: #2563eb;
+      font-weight: 800;
+    }
+
     .log-entry.fail {
       color: #dc2626;
       background: #fee2e2;
@@ -353,10 +423,12 @@
       cursor: pointer;
       transition: all .2s;
       outline: none;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .btn:active { transform: scale(.96) }
+    .btn:active {
+      transform: scale(.96)
+    }
 
     .btn-play {
       background: #2563eb;
@@ -450,11 +522,12 @@
       </div>
 
       <!-- PROTOCOL TOGGLE -->
-      <div class="toggle-wrapper" id="protocolToggle" data-mode="baseline" style="width:400px">
+      <div class="toggle-wrapper" id="protocolToggle" data-mode="baseline" style="width:560px">
         <div class="toggle-pill"></div>
         <button class="toggle-btn active" id="btnBaseline">Baseline (OSPF)</button>
         <button class="toggle-btn" id="btnTradPcer">Trad. PCER</button>
         <button class="toggle-btn" id="btnPcer">Proposed PCER</button>
+        <button class="toggle-btn" id="btnRpl">Industry RPL</button>
       </div>
     </div>
 
@@ -508,6 +581,19 @@
             <div class="metric"><span>Sent</span><span id="pcerDelivered" style="color:#0f172a">0</span></div>
           </div>
         </div>
+
+        <!-- Industry RPL Score -->
+        <div class="score-card rpl" id="cardRpl" style="opacity:0.6">
+          <div class="bg-glow"></div>
+          <div class="score-title">Industry RPL
+            <span class="badge" id="badgeRpl">ACTIVE</span>
+          </div>
+          <div class="metric-grid">
+            <div class="metric"><span>Avg Latency</span><span id="rplLatency" style="color:#7c3aed">0 ms</span></div>
+            <div class="metric loss"><span>Lost</span><span id="rplLoss" style="color:#7c3aed">0</span></div>
+            <div class="metric"><span>Sent</span><span id="rplDelivered" style="color:#0f172a">0</span></div>
+          </div>
+        </div>
       </div>
 
       <div class="sidebar-section">
@@ -556,14 +642,14 @@
       { id: 0, label: "Router", icon: "🌐", type: "mains", initBat: 1.0 },
 
       { id: 1, label: "Smart TV", icon: "📺", type: "mains", initBat: 1.0 },
-      { id: 2, label: "Security Cam", icon: "📷", type: "fast", initBat: 0.20 }, 
+      { id: 2, label: "Security Cam", icon: "📷", type: "fast", initBat: 0.20 },
       { id: 3, label: "Smoke Alarm", icon: "🚨", type: "med", initBat: 0.8 },
       { id: 4, label: "Laptop", icon: "💻", type: "mains", initBat: 1.0 },
 
       { id: 5, label: "Thermostat", icon: "🌡️", type: "med", initBat: 0.3 },
-      { id: 6, label: "Fridge", icon: "🧊", type: "mains", initBat: 1.0 }, 
+      { id: 6, label: "Fridge", icon: "🧊", type: "mains", initBat: 1.0 },
       { id: 7, label: "Doorbell", icon: "🚪", type: "med", initBat: 0.4 },
-      { id: 8, label: "Smart Watch", icon: "⌚", type: "fast", initBat: 0.15 }, 
+      { id: 8, label: "Smart Watch", icon: "⌚", type: "fast", initBat: 0.15 },
 
       { id: 9, label: "Light Bulb", icon: "💡", type: "mains", initBat: 1.0 },
       { id: 10, label: "Heart Mon.", icon: "🫀", type: "fast", initBat: 0.6 },
@@ -581,20 +667,20 @@
     const NUM_NODES = 18;
 
     const edges = [
-      [0,1,10],[0,2,5],[0,3,15],[0,4,20],
-      [1,5,15],[2,6,10],[3,7,20],[4,8,15],
-      [5,9,20],[6,10,15],[7,11,10],[8,12,5],
-      [9,13,10],[10,14,20],[11,15,5],[12,16,10],
-      [13,17,20],[14,17,15],[15,17,10],[16,17,25],
-      [1,2,5], [2,3,10], [5,6,10], [7,8,10],
-      [9,10,5], [11,12,5], [13,14,10], [15,16,5],
-      [10,13,15], [11,16,10], [6,9,25], [3,8,5],
-      [9,1,20], [10,2,15], [16,12,5]
+      [0, 1, 10], [0, 2, 5], [0, 3, 15], [0, 4, 20],
+      [1, 5, 15], [2, 6, 10], [3, 7, 20], [4, 8, 15],
+      [5, 9, 20], [6, 10, 15], [7, 11, 10], [8, 12, 5],
+      [9, 13, 10], [10, 14, 20], [11, 15, 5], [12, 16, 10],
+      [13, 17, 20], [14, 17, 15], [15, 17, 10], [16, 17, 25],
+      [1, 2, 5], [2, 3, 10], [5, 6, 10], [7, 8, 10],
+      [9, 10, 5], [11, 12, 5], [13, 14, 10], [15, 16, 5],
+      [10, 13, 15], [11, 16, 10], [6, 9, 25], [3, 8, 5],
+      [9, 1, 20], [10, 2, 15], [16, 12, 5]
     ];
 
     const adj = {};
     for (let i = 0; i < NUM_NODES; i++) adj[i] = [];
-    
+
     edges.forEach(e => {
       const u = e[0], v = e[1], d = e[2];
       adj[u].push({ node: v, delay: d });
@@ -607,7 +693,7 @@
     let simTime = 0;
     let playing = false;
     let speed = 1;
-    let protocol = 'baseline'; // 'baseline', 'trad-pcer', 'pcer'
+    let protocol = 'baseline'; // 'baseline', 'trad-pcer', 'pcer', 'rpl'
     let nextSpawnTime = 0;
     let lastFrameTime = 0;
     let flashes = []; // {x, y, text, age, color}
@@ -615,14 +701,15 @@
     const stats = {
       baseline: { latSum: 0, count: 0, lost: 0 },
       tradPcer: { latSum: 0, count: 0, lost: 0 },
-      pcer: { critLatSum: 0, critCount: 0, count: 0, lost: 0 }
+      pcer: { critLatSum: 0, critCount: 0, count: 0, lost: 0 },
+      rpl: { latSum: 0, count: 0, lost: 0, critLatSum: 0, critCount: 0 }
     };
 
     let canvas, ctx, W, H;
 
     // ─── INITIALIZATION ──────────────────────────────────────
     function initNodes() {
-      nodes = nodeDefinitions.map(d => ({ ...d, battery: d.initBat, dead: false }));
+      nodes = nodeDefinitions.map(d => ({ ...d, battery: d.initBat, dead: false, trustScore: 1.0, transitCount: 0 }));
       calcPositions();
     }
 
@@ -634,11 +721,11 @@
 
       // Distribute nodes over 6 columns (X) and 4 main layers (Y), plus Dest
       const layout = {
-        0:  [0, 0.5],
-        1:  [1, 0.15], 2:  [1, 0.4],  3:  [1, 0.65], 4:  [1, 0.9],
-        5:  [2, 0.1],  6:  [2, 0.35], 7:  [2, 0.6],  8:  [2, 0.85],
-        9:  [3, 0.15], 10: [3, 0.4],  11: [3, 0.65], 12: [3, 0.9],
-        13: [4, 0.1],  14: [4, 0.35], 15: [4, 0.6],  16: [4, 0.85],
+        0: [0, 0.5],
+        1: [1, 0.15], 2: [1, 0.4], 3: [1, 0.65], 4: [1, 0.9],
+        5: [2, 0.1], 6: [2, 0.35], 7: [2, 0.6], 8: [2, 0.85],
+        9: [3, 0.15], 10: [3, 0.4], 11: [3, 0.65], 12: [3, 0.9],
+        13: [4, 0.1], 14: [4, 0.35], 15: [4, 0.6], 16: [4, 0.85],
         17: [5, 0.5]
       };
 
@@ -656,53 +743,53 @@
       const delay = edge[2];
 
       if (protocol === 'baseline') return delay;
-      
+
       let w1 = 1, w2 = 1;
       if (tag === 0) { w1 = 100; w2 = 0; }
       else if (tag === 2) { w1 = 0; w2 = 100; }
-      
+
       if (protocol === 'pcer' && vNode.battery < 0.05 && vNode.id !== destId) return Infinity;
-      
+
       const eCost = vNode.battery > 0.0001 ? (1.0 / vNode.battery) : 10000;
       return (w1 * delay) + (w2 * eCost);
     }
 
     // Mathematically perfect Dijkstra ensures "no route" only fires when physically impossible
     function calculateBestPath(src, destId, protocol, tag) {
-        const dist = {}, prev = {};
-        const q = [];
-        for(let i=0; i<NUM_NODES; i++) {
-            dist[i] = Infinity; prev[i] = null; q.push(i);
-        }
-        dist[src] = 0;
-        
-        while(q.length > 0) {
-            let uIdx = 0;
-            for(let i=1; i<q.length; i++) if(dist[q[i]] < dist[q[uIdx]]) uIdx = i;
-            const u = q.splice(uIdx, 1)[0];
-            
-            if(u === destId || dist[u] === Infinity) break;
-            
-            adj[u].forEach(neighbor => {
-               if (!q.includes(neighbor.node)) return;
-               const vNode = nodes[neighbor.node];
-               if (vNode.battery <= 0 && vNode.id !== destId) return; 
-               
-               const cost = getEdgeCost(protocol, tag, u, vNode, destId);
-               if (cost === Infinity) return;
-               
-               if (dist[u] + cost < dist[neighbor.node]) {
-                   dist[neighbor.node] = dist[u] + cost;
-                   prev[neighbor.node] = u;
-               }
-            });
-        }
-        
-        if (prev[destId] === null) return { path: [], failed: true };
-        const path = [];
-        let curr = destId;
-        while(curr !== null) { path.unshift(curr); curr = prev[curr]; }
-        return { path, failed: false };
+      const dist = {}, prev = {};
+      const q = [];
+      for (let i = 0; i < NUM_NODES; i++) {
+        dist[i] = Infinity; prev[i] = null; q.push(i);
+      }
+      dist[src] = 0;
+
+      while (q.length > 0) {
+        let uIdx = 0;
+        for (let i = 1; i < q.length; i++) if (dist[q[i]] < dist[q[uIdx]]) uIdx = i;
+        const u = q.splice(uIdx, 1)[0];
+
+        if (u === destId || dist[u] === Infinity) break;
+
+        adj[u].forEach(neighbor => {
+          if (!q.includes(neighbor.node)) return;
+          const vNode = nodes[neighbor.node];
+          if (vNode.battery <= 0 && vNode.id !== destId) return;
+
+          const cost = getEdgeCost(protocol, tag, u, vNode, destId);
+          if (cost === Infinity) return;
+
+          if (dist[u] + cost < dist[neighbor.node]) {
+            dist[neighbor.node] = dist[u] + cost;
+            prev[neighbor.node] = u;
+          }
+        });
+      }
+
+      if (prev[destId] === null) return { path: [], failed: true };
+      const path = [];
+      let curr = destId;
+      while (curr !== null) { path.unshift(curr); curr = prev[curr]; }
+      return { path, failed: false };
     }
 
     // ─── PACKETS ─────────────────────────────────────────────
@@ -711,15 +798,15 @@
 
       const activeNodes = nodes.filter(n => n.battery > 0);
       if (activeNodes.length < 2) return;
-      
+
       const srcNode = forcedSrc >= 0 ? nodes[forcedSrc] : activeNodes[Math.floor(Math.random() * activeNodes.length)];
-      
+
       let destNode;
       if (Math.random() < 0.5) {
-         destNode = (srcNode.id !== 17 && Math.random() < 0.5) ? nodes[17] : nodes[0];
-         if (destNode.id === srcNode.id) destNode = activeNodes[Math.floor(Math.random() * activeNodes.length)];
+        destNode = (srcNode.id !== 17 && Math.random() < 0.5) ? nodes[17] : nodes[0];
+        if (destNode.id === srcNode.id) destNode = activeNodes[Math.floor(Math.random() * activeNodes.length)];
       } else {
-         do { destNode = nodes[Math.floor(Math.random() * nodes.length)]; } while (destNode.id === srcNode.id);
+        do { destNode = nodes[Math.floor(Math.random() * nodes.length)]; } while (destNode.id === srcNode.id);
       }
 
       const src = srcNode.id;
@@ -731,7 +818,7 @@
         // True definitive NO ROUTE partition
         logEvent(`❌ ${TAG_NAMES[tag]} DROPPED at Source ${src} (NETWORK PARTITION)`, 'fail');
         flashes.push({ x: srcNode.x, y: srcNode.y - 45, text: `❌ NO ROUTE (Partition)`, age: 0, color: '#dc2626' });
-        
+
         if (protocol === 'baseline') stats.baseline.lost++;
         else if (protocol === 'trad-pcer') stats.tradPcer.lost++;
         else stats.pcer.lost++;
@@ -740,7 +827,7 @@
       }
 
       let routeCost = 0;
-      for(let i=0; i<path.length-1; i++) routeCost += getDelay(path[i], path[i+1]);
+      for (let i = 0; i < path.length - 1; i++) routeCost += getDelay(path[i], path[i + 1]);
 
       const p = {
         tag,
@@ -776,13 +863,25 @@
           if (n.battery === 0 && !n.dead) {
             n.dead = true;
             logEvent(`☠️ Node ${n.id} (${n.label}) battery died.`, 'fail');
+            n.trustScore = 0; // Blockchain records node failure
           }
         }
       });
 
+      // RPL: Continuously update blockchain trust scores based on node health
+      if (protocol === 'rpl') {
+        nodes.forEach(n => {
+          if (n.dead) { n.trustScore = 0; return; }
+          if (n.type === 'mains') { n.trustScore = 1.0; return; }
+          if (n.battery < 0.05) n.trustScore = Math.max(0.1, n.trustScore - 0.03 * dt);
+          else if (n.battery < 0.2) n.trustScore = Math.max(0.5, n.trustScore - 0.008 * dt);
+          else n.trustScore = Math.min(1.0, n.trustScore + 0.01 * dt);
+        });
+      }
+
       if (simTime >= nextSpawnTime) {
         spawnPacket();
-        nextSpawnTime = simTime + 0.3 + Math.random() * 0.6; 
+        nextSpawnTime = simTime + 0.3 + Math.random() * 0.6;
       }
 
       const speedScale = 2.0;
@@ -813,11 +912,11 @@
             // A node along the established path died while we were travelling!
             const nextNode = nodes[p.path[p.currentPathIdx + 1]];
             if (nextNode && nextNode.battery <= 0 && nextNode.id !== p.destId) {
-               p.alive = false;
-               p.failedAt = p.path[p.currentPathIdx];
-               p.failReason = 'dead';
-               recordStat(p, false);
-               flashes.push({ x: nodes[p.failedAt].x, y: nodes[p.failedAt].y - 45, text: `❌ DEAD PATH`, age: 0, color: '#dc2626' });
+              p.alive = false;
+              p.failedAt = p.path[p.currentPathIdx];
+              p.failReason = 'dead';
+              recordStat(p, false);
+              flashes.push({ x: nodes[p.failedAt].x, y: nodes[p.failedAt].y - 45, text: `❌ DEAD PATH`, age: 0, color: '#dc2626' });
             }
           }
         }
@@ -826,7 +925,7 @@
       for (const p of packets) {
         for (const t of p.trail) t.age += dt;
       }
-      
+
       for (const f of flashes) f.age += dt;
 
       packets = packets.filter(p => p.alive || p.trail.some(t => t.age < 0.5));
@@ -853,12 +952,21 @@
         if (success) { stats.tradPcer.count++; stats.tradPcer.latSum += packet.latency; }
         else { stats.tradPcer.lost++; }
       }
-      else {
+      else if (protocol === 'pcer') {
         if (success) {
           stats.pcer.count++;
           if (packet.tag === 0) { stats.pcer.critCount++; stats.pcer.critLatSum += packet.latency; }
         }
         else { stats.pcer.lost++; }
+      }
+      else {
+        // RPL stats
+        if (success) {
+          stats.rpl.count++;
+          stats.rpl.latSum += packet.latency;
+          if (packet.tag === 0) { stats.rpl.critCount++; stats.rpl.critLatSum += packet.latency; }
+        }
+        else { stats.rpl.lost++; }
       }
       updateScorecards();
     }
@@ -878,15 +986,15 @@
       let pName = protocol === 'baseline' ? 'OSPF' : (protocol === 'trad-pcer' ? 'Trad. PCER' : 'Proposed PCER');
       let html = `<div style="font-size:11px;margin-bottom:8px;color:#8b9cb3">Sent <b style="color:${TAG_COLORS[packet.tag]}">${TAG_NAMES[packet.tag]}</b> via ${pName}:</div>`;
 
-      for(let i=1; i<path.length; i++) {
+      for (let i = 1; i < path.length; i++) {
         const a = path[i];
         html += `<div class="cost-row">
-      <span>→ Node ${a} ${nodes[a]?nodes[a].icon:''}</span>
-      <span>${getDelay(path[i-1], a)}ms</span>
+      <span>→ Node ${a} ${nodes[a] ? nodes[a].icon : ''}</span>
+      <span>${getDelay(path[i - 1], a)}ms</span>
     </div>`;
       }
-      if(path.length === 0) {
-          html += `<div class="cost-row dead"><span>❌ NO ROUTE FOUND</span></div>`;
+      if (path.length === 0) {
+        html += `<div class="cost-row dead"><span>❌ NO ROUTE FOUND</span></div>`;
       }
 
       rows.innerHTML = html;
@@ -909,6 +1017,11 @@
       document.getElementById('pcerLatency').textContent = p.critCount > 0 ? (p.critLatSum / p.critCount).toFixed(1) + ' ms' : '0 ms';
       document.getElementById('pcerLoss').textContent = p.lost;
       document.getElementById('pcerDelivered').textContent = p.count;
+
+      const r = stats.rpl;
+      document.getElementById('rplLatency').textContent = r.count > 0 ? (r.latSum / r.count).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('rplLoss').textContent = r.lost;
+      document.getElementById('rplDelivered').textContent = r.count;
     }
 
     // ─── RENDER ──────────────────────────────────────────────
@@ -993,6 +1106,14 @@
             ctx.fillStyle = '#ef4444'; ctx.font = 'bold 16px Arial';
             ctx.fillText("✖", n.x, n.y);
           }
+
+          // RPL: Show blockchain trust score below battery bar
+          if (protocol === 'rpl') {
+            ctx.font = 'bold 8px JetBrains Mono';
+            ctx.fillStyle = n.trustScore > 0.7 ? '#22c55e' : (n.trustScore > 0.3 ? '#eab308' : '#ef4444');
+            ctx.textAlign = 'center';
+            ctx.fillText('T:' + (n.trustScore || 0).toFixed(1), n.x, n.y + 38);
+          }
         }
       }
 
@@ -1037,16 +1158,19 @@
       document.getElementById('btnBaseline').className = 'toggle-btn ' + (p === 'baseline' ? 'active' : '');
       document.getElementById('btnTradPcer').className = 'toggle-btn ' + (p === 'trad-pcer' ? 'active' : '');
       document.getElementById('btnPcer').className = 'toggle-btn ' + (p === 'pcer' ? 'active' : '');
+      document.getElementById('btnRpl').className = 'toggle-btn ' + (p === 'rpl' ? 'active' : '');
 
-      const cards = ['Baseline', 'TradPcer', 'Pcer'];
+      const cards = ['Baseline', 'TradPcer', 'Pcer', 'Rpl'];
       cards.forEach(c => {
-        const isAct = p === c.toLowerCase().replace('pcer', 'pcer').replace('tradpcer', 'trad-pcer');
+        let key = c.toLowerCase();
+        if (key === 'tradpcer') key = 'trad-pcer';
+        const isAct = p === key;
         document.getElementById('badge' + c).className = 'badge ' + (isAct ? 'active' : '');
         document.getElementById('card' + c).style.opacity = isAct ? '1' : '0.4';
       });
 
-      const pName = p === 'baseline' ? 'OSPF Baseline' : (p === 'trad-pcer' ? 'Traditional PCER' : 'Proposed PCER');
-      logEvent(`<b>Protocol switched to ${pName}</b>`, "");
+      const names = { 'baseline': 'OSPF Baseline', 'trad-pcer': 'Traditional PCER', 'pcer': 'Proposed PCER', 'rpl': 'Industry RPL (RFC 6550)' };
+      logEvent(`<b>Protocol switched to ${names[p]}</b>`, "");
     }
 
     function init() {
@@ -1060,6 +1184,7 @@
       document.getElementById('btnBaseline').onclick = () => toggleProtocol('baseline');
       document.getElementById('btnTradPcer').onclick = () => toggleProtocol('trad-pcer');
       document.getElementById('btnPcer').onclick = () => toggleProtocol('pcer');
+      document.getElementById('btnRpl').onclick = () => toggleProtocol('rpl');
 
       document.getElementById('btnPlay').onclick = () => {
         playing = true;
@@ -1073,12 +1198,13 @@
       };
       document.getElementById('btnReset').onclick = () => {
         initNodes();
-        packets = []; 
-        simTime = 0; 
+        packets = [];
+        simTime = 0;
         nextSpawnTime = 0;
         stats.baseline = { latSum: 0, count: 0, lost: 0 };
         stats.tradPcer = { latSum: 0, count: 0, lost: 0 };
         stats.pcer = { critLatSum: 0, critCount: 0, count: 0, lost: 0 };
+        stats.rpl = { latSum: 0, count: 0, lost: 0, critLatSum: 0, critCount: 0 };
         updateScorecards();
         document.getElementById('eventLog').innerHTML = '';
         logEvent('Network reset. Battery fully charged.');
