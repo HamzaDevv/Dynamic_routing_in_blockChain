@@ -711,7 +711,7 @@
       // SCATTERED MESH
       { id: 13, label: "Alarm", icon: "🚨", type: "med", initBat: 0.5 },
       { id: 14, label: "Doorbell", icon: "🚪", type: "med", initBat: 0.5 },
-      { id: 15, label: "OSPF Trap", icon: "🪤", type: "fast", initBat: 0.2 }, // OSPF (hop-count) blindly takes this 2-hop trap
+      { id: 15, label: "OSPF Trap", icon: "🪤", type: "fast", initBat: 0.5 }, // OSPF (hop-count) blindly takes this 2-hop trap
       { id: 16, label: "Cam", icon: "📷", type: "med", initBat: 0.5 },
 
       { id: 17, label: "Cloud", icon: "☁️", type: "mains", initBat: 1.0 }
@@ -1004,7 +1004,7 @@
             const nextNode = nodes[p.path[p.currentPathIdx + 1]];
             const currNode = nodes[p.path[p.currentPathIdx]];
             const currNodeId = currNode.id;
-            
+
             const isDeadCurr = currNode.battery <= 0 && currNodeId !== p.destId;
             const isDeadNext = nextNode && nextNode.battery <= 0 && nextNode.id !== p.destId;
             const pcerDanger = protocol === 'pcer' && nextNode && nextNode.battery < 0.05 && nextNode.id !== p.destId;
@@ -1057,12 +1057,12 @@
         // Find which portion of the path we actually survived to print it correctly
         const survivedPath = packet.path.slice(0, packet.currentPathIdx + 1);
         const pathStr = survivedPath.join('→') + ' ✖';
-        
+
         let protocolContext = '';
         if (protocol === 'baseline') protocolContext = ' (OSPF Blindness: Node Drained but Route persisted)';
         else if (protocol === 'trad-pcer') protocolContext = ' (Trad PCER failure: Delay prioritized, ignored low battery)';
         else if (protocol === 'rpl') protocolContext = ' (RPL failure: Did not proactively reroute)';
-        
+
         const reasonStr = packet.failReason === 'no_route' ? 'PARTITION' : `NEXT HOP NODE ${packet.deadNextHop} BATTERY EXHAUSTED${protocolContext}`;
         logEvent(`❌ ${TAG_NAMES[packet.tag]} (to ${packet.destId}) DROPPED at Node ${packet.failedAt} | ${reasonStr} | Path: ${pathStr}`, 'fail');
       } else {

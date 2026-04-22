@@ -2,6 +2,9 @@
 
 > A tag-aware, energy-conscious routing protocol that dynamically balances latency and battery life in IoT networks — simulated in NS-3.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FHamzaDevv%2FDynamic_routing_in_blockChain)
+
+
 ---
 
 ## 📄 Abstract
@@ -35,6 +38,18 @@ Open [`index.html`](index.html) in any browser — **no server or dependencies n
 - **Real-time cost calculator** panel showing the exact `CalculateCost()` math per hop
 - **Playback controls** — Play / Pause / Speed / Reset + manual "Send Packet" button
 - **5-phase auto-play** that tells the complete PCER story in 12 seconds
+
+### 🚀 Deploy to Vercel
+You can deploy this entire simulation to your own Vercel account with one click:
+
+1. Push this code to your GitHub.
+2. Connect your repository to [Vercel](https://vercel.com).
+3. Vercel will automatically detect the `index.html` and deploy it as a static site.
+4. Access different versions at:
+   - `/` -> Latest (index.html)
+   - `/v2` -> Version 2
+   - `/v3` -> PCER-T v4 (Advanced)
+
 
 ---
 
