@@ -1000,24 +1000,26 @@
             recordStat(p, true);
             flashes.push({ x: nodes[p.destId].x, y: nodes[p.destId].y - 45, text: `✅ DELIVERED`, age: 0, color: '#166534' });
           } else {
-            // Mid-flight routing check
+            // Mid-flight routing check (Evaluate the node we just arrived at AND the next hop)
             const nextNode = nodes[p.path[p.currentPathIdx + 1]];
-            const currNodeId = p.path[p.currentPathIdx];
+            const currNode = nodes[p.path[p.currentPathIdx]];
+            const currNodeId = currNode.id;
             
+            const isDeadCurr = currNode.battery <= 0 && currNodeId !== p.destId;
             const isDeadNext = nextNode && nextNode.battery <= 0 && nextNode.id !== p.destId;
             const pcerDanger = protocol === 'pcer' && nextNode && nextNode.battery < 0.05 && nextNode.id !== p.destId;
 
-            if (isDeadNext || pcerDanger) {
-              if (protocol !== 'pcer' && isDeadNext) {
-                // Legacy protocols drop the packet when they hit a dead node (No mid-flight reroute)
+            if (isDeadCurr || isDeadNext || pcerDanger) {
+              if (isDeadCurr || (protocol !== 'pcer' && isDeadNext)) {
+                // The node we arrived at is dead, or (for legacy protocols) the next hop is dead. -> Hard Drop
                 p.alive = false;
-                p.failedAt = currNodeId;
-                p.deadNextHop = nextNode.id;
+                p.failedAt = isDeadCurr ? p.path[p.currentPathIdx - 1] : currNodeId;
+                p.deadNextHop = isDeadCurr ? currNodeId : nextNode.id;
                 p.failReason = 'dead';
                 recordStat(p, false);
                 flashes.push({ x: nodes[p.failedAt].x, y: nodes[p.failedAt].y - 45, text: `❌ DROPPED`, age: 0, color: '#dc2626' });
               } else if (protocol === 'pcer') {
-                // Proposed PCER dynamically reroutes mid-flight due to death OR strict <0.05 threshold
+                // Proposed PCER dynamically reroutes mid-flight due to strict <0.05 danger threshold before hitting a dead node
                 const { path: newPath, failed } = calculateBestPath(currNodeId, p.destId, protocol, p.tag);
 
                 if (failed) {
