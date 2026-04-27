@@ -45,19 +45,31 @@ public:
   // PCER Specific Methods
   void AddNeighbor(Ipv4Address neighborAddr, double delay, double energy);
 
-private:
+  private:
   struct NeighborInfo {
     Ipv4Address addr;
     double delay;
     double energy;
     uint32_t interfaceIndex;
+    double queue_size;
+    double trust_score;
+    double etx;
+    double jitter;
+    uint32_t packets_received;
+    uint32_t packets_forwarded;
+    double report_consistency;
+    uint32_t load_count;
   };
 
   // Calculate cost based on PCER logic
-  double CalculateCost(uint8_t tag, const NeighborInfo &neighbor);
+  double CalculateCost(uint8_t tag, const NeighborInfo &neighbor, double distanceToDest);
+  double SigmoidEnergyOverride(double battery, double threshold = 0.08);
+  double CalculateTrust(const NeighborInfo &neighbor);
 
   Ptr<Ipv4> m_ipv4;
   std::map<Ipv4Address, NeighborInfo> m_neighbors; // Simplified neighbor table
+  std::map<Ipv4Address, Ipv4Address> m_prevBestHop;
+  double m_stabilityThreshold = 0.15;
 };
 
 } // namespace ns3

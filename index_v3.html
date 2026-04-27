@@ -1162,6 +1162,12 @@
                                 <div class="v red" id="mBLost">0</div>
                             </div>
                         </div>
+                        <div class="sub-mg mg">
+                            <div class="met">
+                                <div class="lbl">Jitter</div>
+                                <div class="v cyan" id="mBJit">0ms</div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="scard s-rpl" id="cRpl" style="opacity:.4">
@@ -1181,6 +1187,12 @@
                             <div class="met">
                                 <div class="lbl">Lost</div>
                                 <div class="v red" id="mRLost">0</div>
+                            </div>
+                        </div>
+                        <div class="sub-mg mg">
+                            <div class="met">
+                                <div class="lbl">Jitter</div>
+                                <div class="v cyan" id="mRJit">0ms</div>
                             </div>
                         </div>
                         <div class="sub-mg mg">
@@ -1220,6 +1232,12 @@
                         </div>
                         <div class="sub-mg mg">
                             <div class="met">
+                                <div class="lbl">Jitter</div>
+                                <div class="v cyan" id="mV3Jit">0ms</div>
+                            </div>
+                        </div>
+                        <div class="sub-mg mg">
+                            <div class="met">
                                 <div class="lbl">Crit Latency</div>
                                 <div class="v gold" id="mV3CritLat">0ms</div>
                             </div>
@@ -1251,6 +1269,16 @@
                             <div class="met">
                                 <div class="lbl">Lost</div>
                                 <div class="v red" id="mV4Lost">0</div>
+                            </div>
+                        </div>
+                        <div class="sub-mg mg">
+                            <div class="met">
+                                <div class="lbl">Jitter</div>
+                                <div class="v cyan" id="mV4Jit">0ms</div>
+                            </div>
+                            <div class="met">
+                                <div class="lbl">Stab Score</div>
+                                <div class="v green" id="mV4StabScore">0.00</div>
                             </div>
                         </div>
                         <div class="sub-mg mg">
@@ -1432,10 +1460,12 @@
             <button class="btn btn-play" id="btnPlay">▶ Start</button>
             <button class="btn btn-pause" id="btnPause" style="display:none">⏸ Pause</button>
             <button class="btn btn-reset" id="btnReset">↺ Reset</button>
+
             <button class="btn btn-crit" id="btnCrit">🚨 Inject Critical</button>
-            <button class="btn btn-atk" id="btnAtk">⚠️ Degrade Node</button>
-            <button class="btn btn-bulk" id="btnBulk">📦 Inject Bulk</button>
+            <button class="btn btn-atk" id="btnKill">💀 Kill Node</button>
+            <button class="btn btn-bulk" id="btnBurst">🌊 Burst Inject</button>
             <button class="btn btn-v4" id="btnDegrade">📡 Degrade Link ETX</button>
+    
             <div class="spd">
                 <label>Speed</label>
                 <input type="range" id="spdSlider" min="1" max="4" step="1" value="2">
@@ -1527,6 +1557,7 @@
         let nodes = [], packets = [];
         let simTime = 0, playing = false, speed = 1, proto = 'baseline';
         let nextSpawn = 0, lastFrame = 0;
+        let backpressureActive = false, injectionRateMultiplier = 1.0;
 
         // Shared trust state
         let trust = {}, fhist = {}, blacklist = new Set(), loadCount = {};
@@ -1538,10 +1569,10 @@
         let hysteresisBlocks = 0;  // times hysteresis prevented a switch
 
         const stats = {
-            baseline: { latSum: 0, cnt: 0, lost: 0 },
-            rpl: { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0 },
-            pcertv3: { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0 },
-            pcertv4: { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0 },
+            baseline: { latSum: 0, cnt: 0, lost: 0, latencies: [] },
+            rpl: { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0, latencies: [] },
+            pcertv3: { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, latencies: [] },
+            pcertv4: { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0, latencies: [] },
         };
 
         let canvas, ctx, W, H;
@@ -1658,8 +1689,14 @@
 
             // ② Dual Trust Compound: ETX and trust amplify each other
             // Borrowed from RPL-MRHOF+Trust compound objective function
-            const trustBase = (1 - tr) * 20;
+            
+            // ② Dual Trust Compound: ETX and trust amplify each other
+            let trustBase = (1 - tr) * 20;
+            if (tag === 2 && tr >= 0.45 && tr <= 0.55) {
+                trustBase = trustBase * 0.1; // Trust Exploration for Bulk
+            }
             const etxTrustCompound = etxPenalty * (1 - tr); // double-penalty for bad-link + low-trust
+    
 
             // ③ Cubic energy floor (retained from v3)
             let ePenalty;
@@ -1677,7 +1714,18 @@
             const energyCost = ePenalty * w.we;
             const trustCost = trustBase * w.wt;
             const etxCost = (etxPenalty + etxTrustCompound) * w.wetx;
-            const lCost = lbCost * w.wl;
+            
+            // Queue Load Congestion Penalty
+            const qLoad = Math.min(1.0, (loadCount[vn.id] || 0) / 10.0);
+            let congestionPenalty = 0;
+            if (qLoad > 0.8) {
+                congestionPenalty = Math.pow((qLoad - 0.8) / 0.2, 2) * 200.0;
+            } else if (qLoad > 0.5) {
+                congestionPenalty = (qLoad - 0.5) * 20.0;
+            }
+
+            const lCost = lbCost * w.wl + congestionPenalty;
+    
 
             return delayCost + energyCost + trustCost + etxCost + lCost;
         }
@@ -1703,7 +1751,18 @@
             const delayCost = totalDelay * w.wd;
             const energyCost = eBase * w.we;
             const tCost = tBase * w.wt;
-            const lCost = lbCost * w.wl;
+            
+            // Queue Load Congestion Penalty
+            const qLoad = Math.min(1.0, (loadCount[vn.id] || 0) / 10.0);
+            let congestionPenalty = 0;
+            if (qLoad > 0.8) {
+                congestionPenalty = Math.pow((qLoad - 0.8) / 0.2, 2) * 200.0;
+            } else if (qLoad > 0.5) {
+                congestionPenalty = (qLoad - 0.5) * 20.0;
+            }
+
+            const lCost = lbCost * w.wl + congestionPenalty;
+    
             return delayCost + energyCost + tCost + lCost + emergencyEnergy + emergencyTrust;
         }
 
@@ -1808,7 +1867,7 @@
             const p = {
                 tag, path, cost, currentIdx: 0, progress: 0, alive: true, trail: [],
                 failedAt: failed ? path[path.length - 1] : -1, failReason,
-                lbTag: false,
+                lbTag: false, ttl: 15,
             };
             packets.push(p);
             updateRoutingPanel(p, firstAnalysis, path);
@@ -1817,7 +1876,7 @@
         function recordDelivery(p, success) {
             const s = stats[proto];
             if (success) {
-                s.cnt++; s.latSum += p.cost;
+                s.cnt++; s.latSum += p.cost; s.latencies.push(p.cost);
                 if (proto === 'rpl') { const at = p.path.reduce((a, id) => a + (trust[id] || 0), 0) / p.path.length; stats.rpl.tSum += at; stats.rpl.tCnt++; }
                 if ((proto === 'pcertv3' || proto === 'pcertv4') && p.tag === 0) { s.critCnt++; s.critLatSum += p.cost; }
             } else s.lost++;
@@ -1845,11 +1904,27 @@
 
             if (simTime >= nextSpawn) {
                 spawnPacket();
-                nextSpawn = simTime + 0.26 + Math.random() * 0.5;
+                nextSpawn = simTime + (0.26 + Math.random() * 0.5) * injectionRateMultiplier;
                 if (Math.floor(simTime) % 10 === 0) { for (const k in loadCount) loadCount[k] = Math.max(0, (loadCount[k] || 0) - 1); }
             }
 
+            
+            if (proto === 'pcertv4') {
+                let totalQ = 0;
+                for(let i=0; i<18; i++) totalQ += Math.min(1.0, (loadCount[i] || 0) / 10.0);
+                const avgQ = totalQ / 18;
+                if (avgQ > 0.6 && !backpressureActive) {
+                    backpressureActive = true;
+                    log(`⚠️ Network Backpressure: PerBlocks reducing injection rate by 20%`, 'crit');
+                    injectionRateMultiplier = 1.2;
+                } else if (avgQ < 0.3 && backpressureActive) {
+                    backpressureActive = false;
+                    log(`✅ Backpressure resolved. Restoring normal rate.`, 'sys');
+                    injectionRateMultiplier = 1.0;
+                }
+            }
             const spd = 2.2;
+    
             for (const p of packets) {
                 if (!p.alive) continue;
                 p.progress += spd * dt;
@@ -1859,7 +1934,7 @@
                 if (p.trail.length > 22) p.trail.shift();
                 if (p.progress >= 1) {
                     p.currentIdx++; p.progress = 0;
-                    if (p.path[p.currentIdx] === p.failedAt) { p.alive = false; recordDelivery(p, false); }
+                    p.ttl--; if(p.ttl <= 0) { p.alive = false; p.failReason = "ttl"; recordDelivery(p, false); log("Packet dropped (TTL expired during loops)", "fail"); } else if (p.path[p.currentIdx] === p.failedAt) { p.alive = false; recordDelivery(p, false); }
                     else if (p.currentIdx >= p.path.length - 1) { p.alive = false; recordDelivery(p, true); }
                 }
             }
@@ -1993,6 +2068,7 @@
                 ctx.textBaseline = 'alphabetic';
                 ctx.fillText(n.id === 0 ? 'SRC' : n.id === DEST ? 'DST' : String(n.id), n.x, n.y - 24);
 
+
                 // Battery bar
                 if (n.type !== 'mains') {
                     const bw = 22, bh = 3, bx = n.x - bw / 2, by = n.y + 23;
@@ -2001,6 +2077,15 @@
                     if ((isV3 || isV4) && n.battery < BAT_SOFT && n.battery >= BAT_HARD) fc = '#f07830';
                     ctx.fillStyle = fc; ctx.fillRect(bx, by, bw * n.battery, bh);
                 }
+                
+                if (isV4) {
+                    const bw = 22, bh = 2, bx = n.x - bw / 2, by = n.y + (n.type !== 'mains' ? 27 : 23);
+                    ctx.fillStyle = '#0a0e18'; ctx.fillRect(bx, by, bw, bh);
+                    const qPct = Math.min(1.0, (loadCount[n.id] || 0) / 10.0);
+                    let qc = qPct > 0.8 ? '#f04040' : qPct > 0.5 ? '#f07830' : '#08c8e8';
+                    ctx.fillStyle = qc; ctx.fillRect(bx, by, bw * qPct, bh);
+                }
+    
 
                 // Blacklist X
                 if (bl && !dead) {
@@ -2080,6 +2165,17 @@
     <div class="lbar-pct" style="color:${color}">${pct.toFixed(0)}%</div>`;
         }
 
+        
+        function getJitter(latencies) {
+            if (latencies.length < 2) return 0;
+            let sum = 0;
+            for(let i=0; i<latencies.length; i++) sum += latencies[i];
+            const avg = sum / latencies.length;
+            let sqDiff = 0;
+            for(let i=0; i<latencies.length; i++) sqDiff += Math.pow(latencies[i] - avg, 2);
+            return Math.sqrt(sqDiff / latencies.length);
+        }
+    
         function computeRouteStability() {
             // Ratio of hysteresis-blocks to total routing decisions
             const total = stats.pcertv4.cnt + stats.pcertv4.lost;
@@ -2118,6 +2214,14 @@
             document.getElementById('mV4Hyst').textContent = v4.hystBlocks;
             document.getElementById('mV4LB').textContent = v4.lbEvents;
 
+            
+            document.getElementById('mBJit').textContent = getJitter(b.latencies).toFixed(1) + 'ms';
+            document.getElementById('mRJit').textContent = getJitter(r.latencies).toFixed(1) + 'ms';
+            document.getElementById('mV3Jit').textContent = getJitter(v3.latencies).toFixed(1) + 'ms';
+            const v4Jit = getJitter(v4.latencies);
+            document.getElementById('mV4Jit').textContent = v4Jit.toFixed(1) + 'ms';
+            document.getElementById('mV4StabScore').textContent = (1.0 / (1.0 + v4Jit)).toFixed(3);
+    
             makeLBar('lb0', 'Baseline', '#f04040', b.cnt, b.lost);
             makeLBar('lb1', 'RPL+Trust', '#9040f0', r.cnt, r.lost);
             makeLBar('lb2', 'PCER-T v3', '#e8b820', v3.cnt, v3.lost);
@@ -2197,10 +2301,10 @@
             };
             document.getElementById('btnReset').onclick = () => {
                 initAll(); packets = []; simTime = 0; nextSpawn = 0;
-                stats.baseline = { latSum: 0, cnt: 0, lost: 0 };
-                stats.rpl = { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0 };
-                stats.pcertv3 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0 };
-                stats.pcertv4 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0 };
+                stats.baseline = { latSum: 0, cnt: 0, lost: 0, latencies: [] };
+                stats.rpl = { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0, latencies: [] };
+                stats.pcertv3 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, latencies: [] };
+                stats.pcertv4 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0, latencies: [] };
                 updateScorecards();
                 document.getElementById('elog').innerHTML = '';
                 document.getElementById('pulseDot').classList.remove('active');
@@ -2211,8 +2315,34 @@
                 log('Network reset — batteries, ETX, and trust re-initialised', 'sys');
             };
             document.getElementById('btnCrit').onclick = () => spawnPacket(0);
-            document.getElementById('btnBulk').onclick = () => spawnPacket(2);
-            document.getElementById('btnAtk').onclick = randomDegradeNode;
+            
+            
+            document.getElementById('btnKill').onclick = () => {
+                const candidates = [2, 3, 5, 7, 8, 10, 13, 15, 16].filter(i => !nodes[i].dead);
+                if (!candidates.length) return;
+                const pick = candidates[Math.floor(Math.random() * candidates.length)];
+                nodes[pick].battery = 0; nodes[pick].dead = true;
+                log(`💀 Node ${pick} manually KILLED! Triggering mid-flight reroutes...`, 'fail');
+                // Reroute in-flight packets
+                packets.forEach(p => {
+                    if (p.alive && p.path.slice(p.currentIdx).includes(pick)) {
+                        const cur = p.path[p.currentIdx];
+                        const newR = buildPath(p.tag);
+                        if (newR && !newR.failReason) {
+                            p.path = p.path.slice(0, p.currentIdx).concat(newR.path);
+                            log(`🔄 Mid-flight reroute: packet diverted around dead Node ${pick}`, 'sys');
+                        } else {
+                            p.alive = false; p.failReason = "dead"; recordDelivery(p, false);
+                            log(`💀 Reroute failed: packet dropped, no alternate route`, 'fail');
+                        }
+                    }
+                });
+            };
+            document.getElementById('btnBurst').onclick = () => {
+                log(`🌊 BURST: 10 Critical packets injected simultaneously`, 'crit');
+                for(let i=0; i<10; i++) spawnPacket(0);
+            };
+    
             document.getElementById('btnDegrade').onclick = degradeRandomLinkETX;
 
             const spds = [0.5, 1, 2, 4];

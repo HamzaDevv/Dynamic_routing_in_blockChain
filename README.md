@@ -20,9 +20,9 @@ IoT networks face a fundamental trade-off: **speed vs. battery life**. A fire-al
 | Feature | Description |
 |---|---|
 | **Priority Tagging** | Packets are classified as *Critical (0)*, *Standard (1)*, or *Bulk (2)* at the source |
-| **Weighted Cost Function** | `Cost = w₁·delay + w₂·(1/energy)` — weights shift per tag |
-| **Survival Threshold** | Nodes below 5 % battery are excluded from routing, preventing packet loss |
-| **Dynamic Route Switching** | The protocol re-evaluates every hop in real time as energy levels drop |
+| **Weighted 5-Component Cost** | Incorporates Delay, Energy (Sigmoid), Trust, ETX, and Queue Load |
+| **Bi-directional Backpressure**| L3 signals L7 to throttle injection when queue occupancy exceeds 60% |
+| **Dynamic Route Switching** | The protocol re-evaluates every hop in real time, guarded by Hysteresis |
 | **Standalone Demo** | A self-contained C++ binary demonstrates the routing logic without NS-3 |
 | **Traffic Generator** | Python script simulates realistic IoT traffic distributions |
 | **Automated Analysis** | Matplotlib scripts produce publication-ready latency & network-life graphs |
@@ -282,8 +282,7 @@ double PcerRoutingProtocol::CalculateCost(uint8_t tag, const NeighborInfo &neigh
 ## 🔮 Future Work
 
 - **Multi-hop path computation** — extend beyond direct-neighbour routing to full shortest-path trees
-- **Dynamic weight learning** — use reinforcement learning to adapt weights based on real-time network conditions
-- **Blockchain integration** — secure routing tables with lightweight consensus for tamper-proof path verification
+- **Multi-Agent Reinforcement Learning (MARL)** — replace static multi-component weights with adaptive RL layers
 - **Hardware testbed** — validate on real IoT boards (ESP32 / Raspberry Pi mesh)
 
 ---

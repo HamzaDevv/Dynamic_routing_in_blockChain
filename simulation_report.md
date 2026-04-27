@@ -179,7 +179,7 @@ All four protocols deliver within a 2.5ms window of each other. For IoT use case
 ```mermaid
 graph LR
     A["Baseline OSPF<br/>PDR: 95.2%<br/>Lat: 112.7ms"] -->|"+Battery Awareness"| B["Trad. PCER<br/>PDR: 97.1%<br/>Lat: 114.6ms"]
-    B -->|"+QoS Tag Weights"| C["Proposed PCER<br/>PDR: 96.2%<br/>Lat: 115.2ms"]
+    B -->|"+QoS Tag Weights"| C["PCER-v5<br/>PDR: 96.2%<br/>Lat: 115.2ms"]
     B -->|"+Trust + Gradual Penalty"| D["Industry RPL<br/>PDR: 99.0%<br/>Lat: 114.6ms"]
     
     style A fill:#fee2e2,stroke:#dc2626,color:#991b1b
@@ -207,3 +207,13 @@ graph LR
 ---
 
 *Report generated from simulation data · 18-node IoT mesh · 200 packets delivered per protocol · Node 12 (Tablet) configured at 30% battery (med drain type)*
+
+---
+
+## 6. Future Work
+
+### 6.1 Multi-Agent Reinforcement Learning (MARL)
+While the current PCER-v5 uses a static 5-component cost function with Sigmoid smoothing and explicit Hysteresis, future iterations aim to replace the static weight coefficients with a **Multi-Agent Reinforcement Learning (MARL)** layer. 
+- **Goal**: Enable nodes to dynamically adjust weights ($w_d, w_e, w_t, w_{etx}, w_l$) based on local environment states and global reward signals (e.g., successful packet delivery vs. energy consumption).
+- **Challenge**: Proper implementation will require redesigning the node state-space and reward functions to prevent convergence issues and excessive overhead.
+- **Timeline**: Slated for long-term research (post-2026).
