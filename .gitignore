@@ -1,0 +1,10 @@
+# Node
+node_modules/
+
+# Hardhat
+artifacts/
+cache/
+ignition/deployments/
+
+# Mac
+.DS_Store
