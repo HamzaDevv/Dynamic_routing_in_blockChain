@@ -8,3 +8,6 @@ ignition/deployments/
 
 # Mac
 .DS_Store
+
+# Simulation Logs
+*.csv

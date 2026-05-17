@@ -1490,6 +1490,7 @@
             <button class="btn btn-play" id="btnPlay">▶ Start</button>
             <button class="btn btn-pause" id="btnPause" style="display:none">⏸ Pause</button>
             <button class="btn btn-reset" id="btnReset">↺ Reset</button>
+            <button class="btn btn-v4" id="btnExport" style="background:linear-gradient(135deg,#065f46,#047857);border-color:#10b981" title="Export real simulation data as CSV for Python charting">⬇ Export Data</button>
 
             <button class="btn btn-crit" id="btnCrit">🚨 Inject Critical</button>
             <button class="btn btn-atk" id="btnKill">💀 Kill Node</button>
@@ -1599,11 +1600,23 @@
         let hysteresisBlocks = 0;  // times hysteresis prevented a switch
 
         const stats = {
-            baseline: { latSum: 0, cnt: 0, lost: 0, latencies: [] },
-            rpl: { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0, latencies: [] },
-            pcertv3: { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, latencies: [] },
-            pcertv4: { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0, latencies: [] },
+            baseline: { latSum: 0, cnt: 0, lost: 0, latencies: [],
+                        tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} },
+            rpl:      { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0, latencies: [],
+                        tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} },
+            pcertv3:  { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, latencies: [],
+                        tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} },
+            pcertv4:  { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0, latencies: [],
+                        tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} },
         };
+
+        // ── Real Data Collection ───────────────────────────────────────
+        // batteryLog: [{time, proto, nodeId, battery}]
+        // packetLog:  [{time, proto, tag, latency, success, hops}]
+        const batteryLog = [];
+        const packetLog  = [];
+        let   lastBatterySnapshotTime = 0;
+        const BATTERY_SNAPSHOT_INTERVAL = 1.0; // seconds
 
         let canvas, ctx, W, H;
         let highlightNode = -1;
@@ -1933,7 +1946,7 @@
                 tag, path, cost, currentIdx: 0, progress: 0, alive: true, trail: [],
                 failedAt: failed ? path[path.length - 1] : -1, failReason,
                 idealTail: failed ? getIdealTail(path[path.length - 1]) : null,
-                lbTag: false, ttl: 15,
+                lbTag: false, ttl: 15, spawnTime: performance.now(),
             };
             packets.push(p);
             updateRoutingPanel(p, firstAnalysis, path);
@@ -1941,11 +1954,27 @@
 
         function recordDelivery(p, success) {
             const s = stats[proto];
+            const latMs = (performance.now() - p.spawnTime);
             if (success) {
                 s.cnt++; s.latSum += p.cost; s.latencies.push(p.cost);
+                s.tagCnt[p.tag]++; s.tagLatSum[p.tag] += p.cost;
                 if (proto === 'rpl') { const at = p.path.reduce((a, id) => a + (trust[id] || 0), 0) / p.path.length; stats.rpl.tSum += at; stats.rpl.tCnt++; }
                 if ((proto === 'pcertv3' || proto === 'pcertv4') && p.tag === 0) { s.critCnt++; s.critLatSum += p.cost; }
-            } else s.lost++;
+            } else {
+                s.lost++;
+                s.tagLost[p.tag]++;
+            }
+            // Real data log for CSV export
+            packetLog.push({
+                time:    simTime.toFixed(2),
+                proto,
+                tag:     p.tag,
+                latency: p.cost.toFixed(3),
+                latencyMs: latMs.toFixed(1),
+                success: success ? 1 : 0,
+                hops:    p.path ? p.path.length - 1 : 0,
+                failReason: success ? '' : (p.failReason || 'unknown'),
+            });
             updateScorecards();
         }
 
@@ -1954,6 +1983,20 @@
             simTime += dt;
             // ETX slow recovery
             etxRecovery(dt);
+
+            // ── Battery snapshot (every 1s real sim time) ─────────────
+            if (simTime - lastBatterySnapshotTime >= BATTERY_SNAPSHOT_INTERVAL) {
+                lastBatterySnapshotTime = simTime;
+                nodes.forEach(n => {
+                    batteryLog.push({
+                        time:    simTime.toFixed(1),
+                        proto,
+                        nodeId:  n.id,
+                        battery: (n.battery * 100).toFixed(2),
+                        type:    n.type,
+                    });
+                });
+            }
 
             nodes.forEach(n => {
                 if (n.type === 'mains') { n.battery = 1; }
@@ -2385,10 +2428,13 @@
             };
             document.getElementById('btnReset').onclick = () => {
                 initAll(); packets = []; simTime = 0; nextSpawn = 0;
-                if (proto === 'baseline') stats.baseline = { latSum: 0, cnt: 0, lost: 0, latencies: [] };
-                else if (proto === 'rpl') stats.rpl = { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0, latencies: [] };
-                else if (proto === 'pcertv3') stats.pcertv3 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, latencies: [] };
-                else if (proto === 'pcertv4') stats.pcertv4 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0, latencies: [] };
+                batteryLog.length = 0; // Clear collected battery log
+                packetLog.length = 0;  // Clear collected packet log
+                lastBatterySnapshotTime = 0;
+                if (proto === 'baseline') stats.baseline = { latSum: 0, cnt: 0, lost: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                else if (proto === 'rpl') stats.rpl = { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                else if (proto === 'pcertv3') stats.pcertv3 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                else if (proto === 'pcertv4') stats.pcertv4 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
                 updateScorecards();
                 document.getElementById('elog').innerHTML = '';
                 document.getElementById('pulseDot').classList.remove('active');
@@ -2396,7 +2442,7 @@
                 document.getElementById('btnPlay').style.display = '';
                 document.getElementById('btnPause').style.display = 'none';
                 playing = false;
-                log('Network reset — batteries, ETX, and trust re-initialised', 'sys');
+                log('Network reset — batteries, ETX, trust, and logs re-initialised', 'sys');
             };
             document.getElementById('btnCrit').onclick = () => spawnPacket(0);
             
@@ -2428,6 +2474,60 @@
             };
     
             document.getElementById('btnDegrade').onclick = degradeRandomLinkETX;
+
+            // ── Export Data Button ─────────────────────────────────────────
+            function downloadCSV(filename, rows) {
+                const keys = Object.keys(rows[0]);
+                const csv  = [keys.join(','),
+                    ...rows.map(r => keys.map(k => JSON.stringify(r[k] ?? '')).join(','))
+                ].join('\n');
+                const a = Object.assign(document.createElement('a'), {
+                    href: URL.createObjectURL(new Blob([csv], {type:'text/csv'})),
+                    download: filename,
+                });
+                a.click();
+                URL.revokeObjectURL(a.href);
+            }
+
+            document.getElementById('btnExport').onclick = () => {
+                if (batteryLog.length === 0 && packetLog.length === 0) {
+                    alert('No data yet! Run the simulation for at least 30 seconds first, then export.');
+                    return;
+                }
+
+                // 1. Battery log CSV
+                if (batteryLog.length > 0) downloadCSV('battery_log.csv', batteryLog);
+
+                // 2. Packet log CSV
+                if (packetLog.length > 0) downloadCSV('packet_log.csv', packetLog);
+
+                // 3. Summary CSV (per protocol aggregate)
+                const PROTOCOLS = ['baseline','rpl','pcertv3','pcertv4'];
+                const TAG_NAMES  = {0:'Critical',1:'Standard',2:'Bulk'};
+                const summaryRows = [];
+                PROTOCOLS.forEach(p => {
+                    const s = stats[p];
+                    const total = s.cnt + s.lost;
+                    summaryRows.push({
+                        protocol: p,
+                        packets_delivered: s.cnt,
+                        packets_dropped:   s.lost,
+                        total_packets:     total,
+                        loss_rate_pct:     total > 0 ? ((s.lost/total)*100).toFixed(2) : 0,
+                        avg_latency:       s.cnt > 0 ? (s.latSum/s.cnt).toFixed(4) : 0,
+                        crit_delivered:    s.tagCnt?.[0] ?? 0,
+                        crit_dropped:      s.tagLost?.[0] ?? 0,
+                        std_delivered:     s.tagCnt?.[1] ?? 0,
+                        std_dropped:       s.tagLost?.[1] ?? 0,
+                        bulk_delivered:    s.tagCnt?.[2] ?? 0,
+                        bulk_dropped:      s.tagLost?.[2] ?? 0,
+                        sim_time_s:        simTime.toFixed(1),
+                    });
+                });
+                downloadCSV('simulation_summary.csv', summaryRows);
+
+                log(`⬇ Exported: battery_log.csv, packet_log.csv, simulation_summary.csv`, 'sys');
+            };
 
             const spds = [0.5, 1, 2, 4];
             document.getElementById('spdSlider').oninput = function () {
