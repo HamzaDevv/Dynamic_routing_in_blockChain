@@ -52,12 +52,13 @@ async function main() {
     [13, 17, 20], [14, 17, 15], [15, 17, 10], [16, 17, 25],
     [1, 2, 5], [2, 3, 10], [5, 6, 10], [7, 8, 10],
     [9, 10, 5], [11, 12, 5], [13, 14, 10], [15, 16, 5],
+    [10, 13, 15], [11, 16, 10], [6, 9, 25], [3, 8, 5],
   ];
 
   for (const e of edges) {
     const [u, v, delay] = e;
     await pcer.setEdge(u, v, delay, 100); // etx 1.0 (100)
-    await pcer.setEdge(v, u, delay, 100);
+    await pcer.setEdge(v, u, delay, 100); // bidirectional
   }
 
   console.log("Topology initialized on-chain!");

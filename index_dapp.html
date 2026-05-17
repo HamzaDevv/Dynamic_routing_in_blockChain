@@ -2445,19 +2445,58 @@
     <script>
         let pcerContract = null;
         let web3Provider = null;
-        
+
+        // ── Route Cache (Section 1.4) ─────────────────────────────────
+        // Keyed by `${source}_${tag}` → { bestHop, cost, ts }
+        // Invalidated when any node's battery or trust changes > 5%
+        const routeCache   = new Map();
+        const CACHE_TTL_MS = 500; // half-second TTL
+        const lastBattery  = {};
+        const lastTrust    = {};
+
+        function cacheKey(source, tag) { return `${source}_${tag}`; }
+
+        function isCacheValid(key) {
+            const entry = routeCache.get(key);
+            if (!entry) return false;
+            return (Date.now() - entry.ts) < CACHE_TTL_MS;
+        }
+
+        function invalidateCacheForNode(nodeId) {
+            for (const k of routeCache.keys()) {
+                if (k.startsWith(`${nodeId}_`)) routeCache.delete(k);
+            }
+        }
+
+        function checkTopologyChanges() {
+            for (let i = 0; i < 18; i++) {
+                const bat = nodes[i]?.battery ?? 0;
+                const tr  = trust[i]           ?? 0;
+                if (lastBattery[i] !== undefined && Math.abs(bat - lastBattery[i]) / (lastBattery[i] || 1) > 0.05) {
+                    invalidateCacheForNode(i);
+                }
+                if (lastTrust[i] !== undefined && Math.abs(tr - lastTrust[i]) > 0.05) {
+                    invalidateCacheForNode(i);
+                }
+                lastBattery[i] = bat;
+                lastTrust[i]   = tr;
+            }
+        }
+        setInterval(checkTopologyChanges, 300);
+
+        // ── Web3 Initialisation ───────────────────────────────────────
         async function initWeb3() {
             if (typeof ethers !== 'undefined' && typeof CONTRACT_ADDRESS !== 'undefined') {
                 try {
                     web3Provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
                     const network = await web3Provider.getNetwork();
                     console.log("Connected to Hardhat local node:", network);
-                    
+
                     const signer = await web3Provider.getSigner();
                     pcerContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-                    
+
                     document.getElementById('web3Address').innerText = CONTRACT_ADDRESS.substring(0, 8) + '...';
-                    
+
                     // Poll block number
                     setInterval(async () => {
                         try {
@@ -2471,37 +2510,65 @@
             }
         }
 
-        // Intercept buildPath to send real Web3 transactions in the background
+        // ── Intercept buildPath ───────────────────────────────────────
         const originalBuildPath = buildPath;
         buildPath = function(tag) {
             const result = originalBuildPath(tag);
-            
+
             if (proto === 'pcertv4' && pcerContract && result && result.src !== DEST) {
-                // Determine neighbors to send to smart contract
-                const neighbors = adj[result.src].map(a => a.node);
-                const deadEnds = neighbors.map(n => checkDeadEnd(n, result.src, new Set([result.src])));
-                
-                // Send transaction
-                pcerContract.getNextHop(result.src, tag, neighbors, deadEnds)
-                    .then(async tx => {
-                        const term = document.getElementById('web3Terminal');
-                        term.innerHTML = `<span style="color:var(--gold)">Mining transaction...<br>${tx.hash}</span>`;
-                        
+                const source    = result.src;
+                const neighbors = adj[source].map(a => a.node);
+                const key       = cacheKey(source, tag);
+                const term      = document.getElementById('web3Terminal');
+
+                if (isCacheValid(key)) {
+                    // Cache hit — skip RPC entirely
+                    const cached = routeCache.get(key);
+                    term.innerHTML = `<span style="color:#22c55e">⚡ CACHE HIT</span>  <span style="color:#64748b">source #${source} tag:${tag}</span><br>
+<span style="color:#64748b">Best hop:</span> <span style="color:#fff">#${cached.bestHop}</span>  <span style="color:#64748b">Cost:</span> <span style="color:#10b981">${cached.cost}</span><br>
+<span style="color:#475569">Route cache TTL: ${CACHE_TTL_MS}ms — RPC call skipped</span>`;
+                    return result;
+                }
+
+                // Phase 1: ZERO-GAS view call (staticCall)
+                (async () => {
+                    try {
+                        term.innerHTML = `<span style="color:#38bdf8">⟳ ROUTE QUERY</span>  <span style="color:#64748b">PCERRouting#getNextHop (staticCall — 0 gas)</span>`;
+
+                        const [bestHop, minCost] = await pcerContract.getNextHop.staticCall(source, tag, neighbors);
+
+                        // Store in cache
+                        routeCache.set(key, { bestHop: Number(bestHop), cost: Number(minCost), ts: Date.now() });
+
+                        const packetId = ethers.id(`${source}-${tag}-${Date.now()}`).substring(0, 66);
+
+                        term.innerHTML = `
+<span style="color:#64748b">Contract view:</span>    <span style="color:#fff">PCERRouting#getNextHop</span><br>
+<span style="color:#64748b">Call type:</span>        <span style="color:#22c55e">staticCall (0 gas consumed)</span><br>
+<span style="color:#64748b">Source:</span>           <span style="color:#94a3b8">#${source}</span>  <span style="color:#64748b">→ Best Hop:</span> <span style="color:#fff">#${bestHop}</span><br>
+<span style="color:#64748b">Min cost:</span>         <span style="color:#10b981">${minCost}</span><br>
+<span style="color:#f59e0b">⟳ Logging path on-chain…</span>`;
+
+                        // Phase 2: CHEAP state-changing logPath tx
+                        const tx = await pcerContract.logPath(packetId, source, bestHop, minCost, tag);
                         const receipt = await tx.wait();
                         document.getElementById('web3Gas').innerText = receipt.gasUsed.toString();
-                        
+
                         term.innerHTML = `
-<span style="color:#64748b">Contract call:</span>       <span style="color:#fff">PCERRouting#getNextHop</span><br>
-<span style="color:#64748b">Transaction:</span>         <span style="color:#38bdf8">${tx.hash}</span><br>
-<span style="color:#64748b">From:</span>                <span style="color:#94a3b8">${tx.from}</span><br>
-<span style="color:#64748b">To:</span>                  <span style="color:#94a3b8">${tx.to}</span><br>
-<span style="color:#64748b">Value:</span>               <span style="color:#94a3b8">0 ETH</span><br>
-<span style="color:#64748b">Gas used:</span>            <span style="color:#10b981">${receipt.gasUsed.toString()}</span><br>
-<span style="color:#64748b">Block #${receipt.blockNumber}:</span>          <span style="color:#38bdf8">${receipt.blockHash}</span>`;
-                    })
-                    .catch(e => console.error("Web3 routing error:", e));
+<span style="color:#64748b">Contract view:</span>    <span style="color:#fff">PCERRouting#getNextHop (staticCall)</span><br>
+<span style="color:#64748b">Gas consumed:</span>     <span style="color:#22c55e">0 (zero-cost routing decision)</span><br>
+<span style="color:#64748b">Source #${source}</span>  →  <span style="color:#fff">Hop #${bestHop}</span>  |  Cost: <span style="color:#10b981">${minCost}</span><br>
+<span style="color:#f59e0b">─── Audit Trail (PathSelected event) ───</span><br>
+<span style="color:#64748b">logPath tx:</span>       <span style="color:#38bdf8">${tx.hash}</span><br>
+<span style="color:#64748b">From:</span>             <span style="color:#94a3b8">${tx.from}</span><br>
+<span style="color:#64748b">Gas used:</span>         <span style="color:#10b981">${receipt.gasUsed.toString()}</span>  <span style="color:#475569">(audit-only)</span><br>
+<span style="color:#64748b">Block #${receipt.blockNumber}:</span>     <span style="color:#38bdf8">${receipt.blockHash}</span>`;
+                    } catch (e) {
+                        console.error("Web3 routing error:", e);
+                    }
+                })();
             }
-            
+
             return result;
         };
 
