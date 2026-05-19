@@ -12,36 +12,36 @@
         rel="stylesheet">
     <style>
         :root {
-            --bg: #060910;
-            --surface: #0b0f18;
-            --surface2: #0f1520;
-            --surface3: #131c2c;
-            --border: #192338;
-            --border2: #213047;
-            --text: #d8e4f0;
-            --muted: #3a5272;
-            --muted2: #536a88;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --surface2: #f1f5f9;
+            --surface3: #e2e8f0;
+            --border: #e2e8f0;
+            --border2: #cbd5e1;
+            --text: #1e293b;
+            --muted: #94a3b8;
+            --muted2: #64748b;
 
-            --red: #f04040;
-            --orange: #f07830;
-            --yellow: #e8b820;
-            --green: #20c060;
-            --teal: #10b8a8;
-            --blue: #2878f0;
-            --violet: #9040f0;
-            --cyan: #08c8e8;
-            --lime: #78d810;
-            --gold: #f8c030;
-            --amber: #ff9800;
+            --red: #dc2626;
+            --orange: #ea580c;
+            --yellow: #a16207;
+            --green: #15803d;
+            --teal: #0f766e;
+            --blue: #2563eb;
+            --violet: #7c3aed;
+            --cyan: #0e7490;
+            --lime: #4d7c0f;
+            --gold: #b45309;
+            --amber: #c2410c;
 
-            --red-a: rgba(240, 64, 64, 0.12);
-            --yellow-a: rgba(232, 184, 32, 0.12);
-            --green-a: rgba(32, 192, 96, 0.12);
-            --violet-a: rgba(144, 64, 240, 0.12);
-            --cyan-a: rgba(8, 200, 232, 0.12);
-            --gold-a: rgba(248, 192, 48, 0.14);
-            --blue-a: rgba(40, 120, 240, 0.12);
-            --teal-a: rgba(16, 184, 168, 0.12);
+            --red-a: rgba(220, 38, 38, 0.08);
+            --yellow-a: rgba(161, 98, 7, 0.08);
+            --green-a: rgba(21, 128, 61, 0.08);
+            --violet-a: rgba(124, 58, 237, 0.08);
+            --cyan-a: rgba(14, 116, 144, 0.08);
+            --gold-a: rgba(180, 83, 9, 0.10);
+            --blue-a: rgba(37, 99, 235, 0.08);
+            --teal-a: rgba(15, 118, 110, 0.08);
         }
 
         * {
@@ -67,7 +67,7 @@
             background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, .07) 2px, rgba(0, 0, 0, .07) 4px);
             pointer-events: none;
             z-index: 9999;
-            opacity: .4;
+            opacity: 0;
         }
 
         .app {
@@ -736,7 +736,7 @@
 
         .rb p {
             font-size: 11px;
-            color: #6a8aaf;
+            color: #475569;
             line-height: 1.65;
             font-family: 'Rajdhani', sans-serif
         }
@@ -839,7 +839,7 @@
 
         .dg-cell .dg-val {
             font-size: 10px;
-            color: #6a8aaf;
+            color: #475569;
             line-height: 1.5;
             font-family: 'Rajdhani', sans-serif
         }
@@ -850,7 +850,7 @@
             bottom: 10px;
             left: 10px;
             z-index: 10;
-            background: rgba(6, 9, 16, .9);
+            background: rgba(255, 255, 255, .92);
             border: 1px solid var(--border);
             border-radius: 7px;
             padding: 8px 12px;
@@ -1085,23 +1085,23 @@
             <div class="legend" id="legend" style="display:none">
                 <div class="legend-title">Trust · ETX · Energy (v4 Hybrid)</div>
                 <div class="lg-row">
-                    <div class="lg-dot" style="background:#20c060"></div><span style="color:#6a8aaf">Trust ≥0.7 · Low
+                    <div class="lg-dot" style="background:#20c060"></div><span style="color:#475569">Trust ≥0.7 · Low
                         ETX · Healthy</span>
                 </div>
                 <div class="lg-row">
-                    <div class="lg-dot" style="background:#e8b820"></div><span style="color:#6a8aaf">Trust 0.4–0.7 ·
+                    <div class="lg-dot" style="background:#e8b820"></div><span style="color:#475569">Trust 0.4–0.7 ·
                         Medium ETX</span>
                 </div>
                 <div class="lg-row">
-                    <div class="lg-dot" style="background:#f04040"></div><span style="color:#6a8aaf">Trust &lt;0.4 ·
+                    <div class="lg-dot" style="background:#f04040"></div><span style="color:#475569">Trust &lt;0.4 ·
                         High ETX — penalised</span>
                 </div>
                 <div class="lg-row">
-                    <div class="lg-dot" style="background:#08c8e8"></div><span style="color:#6a8aaf">★ MRHOF-ETX
+                    <div class="lg-dot" style="background:#08c8e8"></div><span style="color:#475569">★ MRHOF-ETX
                         preferred hop</span>
                 </div>
                 <div class="lg-row">
-                    <div class="lg-dot" style="background:#f8c030"></div><span style="color:#6a8aaf">⚖ Load-balanced alt
+                    <div class="lg-dot" style="background:#f8c030"></div><span style="color:#475569">⚖ Load-balanced alt
                         path</span>
                 </div>
             </div>
@@ -1167,7 +1167,7 @@
                             </div>
                         </div>
                         <div class="sub-mg mg">
-                            <div class="met" style="grid-column: span 3; text-align: left; background: #0f172a; padding: 12px; border-radius: 6px; font-family: 'Share Tech Mono', monospace; font-size: 11px; line-height: 1.5; color: #a5b4fc; border: 1px solid #1e293b;">
+                            <div class="met" style="grid-column: span 3; text-align: left; background: #f1f5f9; padding: 12px; border-radius: 6px; font-family: 'Share Tech Mono', monospace; font-size: 11px; line-height: 1.5; color: #334155; border: 1px solid #e2e8f0;">
                                 <div id="web3Terminal">Waiting for routing event...</div>
                             </div>
                         </div>
@@ -2070,7 +2070,7 @@
                 } else if (isHighETX && isV4) {
                     ctx.strokeStyle = 'rgba(248,120,48,0.28)'; ctx.lineWidth = 1.8;
                 } else {
-                    ctx.strokeStyle = '#192338'; ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1.5;
                 }
                 ctx.stroke();
 
@@ -2080,7 +2080,7 @@
                     ctx.fillStyle = 'rgba(248,120,48,0.7)';
                     ctx.fillText(`ETX:${etxVal.toFixed(1)}`, mx, my - 5);
                 } else {
-                    ctx.fillStyle = '#253553';
+                    ctx.fillStyle = '#94a3b8';
                     ctx.fillText(d + 'ms', mx, my - 5);
                 }
             }
@@ -2178,10 +2178,10 @@
 
                 // Node circle
                 ctx.beginPath(); ctx.arc(n.x, n.y, 20, 0, Math.PI * 2);
-                ctx.fillStyle = dead ? '#0c1120' : '#0f1520'; ctx.fill();
-                let strokeC = dead ? '#f04040' : bl ? 'rgba(240,64,64,.5)' : '#192338';
-                if (n.id === 0) strokeC = '#1e3a5f';
-                if (n.id === DEST) strokeC = '#1a4a2a';
+                ctx.fillStyle = dead ? '#f1f5f9' : '#ffffff'; ctx.fill();
+                let strokeC = dead ? '#dc2626' : bl ? 'rgba(220,38,38,.5)' : '#cbd5e1';
+                if (n.id === 0) strokeC = '#93c5fd';
+                if (n.id === DEST) strokeC = '#86efac';
                 ctx.strokeStyle = strokeC; ctx.lineWidth = dead || bl ? 2 : 1.5; ctx.stroke();
 
                 // Icon
@@ -2191,7 +2191,7 @@
 
                 // ID label
                 ctx.font = 'bold 7px Exo 2';
-                ctx.fillStyle = dead ? '#f04040' : n.id === 0 ? '#2878f0' : n.id === DEST ? '#20c060' : '#334155';
+                ctx.fillStyle = dead ? '#dc2626' : n.id === 0 ? '#2563eb' : n.id === DEST ? '#15803d' : '#64748b';
                 ctx.textBaseline = 'alphabetic';
                 ctx.fillText(n.id === 0 ? 'SRC' : n.id === DEST ? 'DST' : String(n.id), n.x, n.y - 24);
 
@@ -2199,7 +2199,7 @@
                 // Battery bar
                 if (n.type !== 'mains') {
                     const bw = 22, bh = 3, bx = n.x - bw / 2, by = n.y + 23;
-                    ctx.fillStyle = '#0a0e18'; ctx.fillRect(bx, by, bw, bh);
+                    ctx.fillStyle = '#e2e8f0'; ctx.fillRect(bx, by, bw, bh);
                     let fc = n.battery < 0.05 ? '#f04040' : n.battery < 0.2 ? '#e8b820' : '#20c060';
                     if ((isV3 || isV4) && n.battery < BAT_SOFT && n.battery >= BAT_HARD) fc = '#f07830';
                     ctx.fillStyle = fc; ctx.fillRect(bx, by, bw * n.battery, bh);
@@ -2207,7 +2207,7 @@
                 
                 if (isV4) {
                     const bw = 22, bh = 2, bx = n.x - bw / 2, by = n.y + (n.type !== 'mains' ? 27 : 23);
-                    ctx.fillStyle = '#0a0e18'; ctx.fillRect(bx, by, bw, bh);
+                    ctx.fillStyle = '#e2e8f0'; ctx.fillRect(bx, by, bw, bh);
                     const qPct = Math.min(1.0, (loadCount[n.id] || 0) / 10.0);
                     let qc = qPct > 0.8 ? '#f04040' : qPct > 0.5 ? '#f07830' : '#08c8e8';
                     ctx.fillStyle = qc; ctx.fillRect(bx, by, bw * qPct, bh);
@@ -2624,16 +2624,16 @@
                 if (isCacheValid(key)) {
                     // Cache hit — skip RPC entirely
                     const cached = routeCache.get(key);
-                    term.innerHTML = `<span style="color:#22c55e">⚡ CACHE HIT</span>  <span style="color:#64748b">source #${source} tag:${tag}</span><br>
-<span style="color:#64748b">Best hop:</span> <span style="color:#fff">#${cached.bestHop}</span>  <span style="color:#64748b">Cost:</span> <span style="color:#10b981">${cached.cost}</span><br>
-<span style="color:#475569">Route cache TTL: ${CACHE_TTL_MS}ms — RPC call skipped</span>`;
+                    term.innerHTML = `<span style="color:#15803d">⚡ CACHE HIT</span>  <span style="color:#64748b">source #${source} tag:${tag}</span><br>
+<span style="color:#64748b">Best hop:</span> <span style="color:#1e293b">#${cached.bestHop}</span>  <span style="color:#64748b">Cost:</span> <span style="color:#059669">${cached.cost}</span><br>
+<span style="color:#94a3b8">Route cache TTL: ${CACHE_TTL_MS}ms — RPC call skipped</span>`;
                     return result;
                 }
 
                 // Phase 1: ZERO-GAS view call (staticCall)
                 (async () => {
                     try {
-                        term.innerHTML = `<span style="color:#38bdf8">⟳ ROUTE QUERY</span>  <span style="color:#64748b">PCERRouting#getNextHop (staticCall — 0 gas)</span>`;
+                        term.innerHTML = `<span style="color:#0e7490">⟳ ROUTE QUERY</span>  <span style="color:#64748b">PCERRouting#getNextHop (staticCall — 0 gas)</span>`;
 
                         const [bestHop, minCost] = await pcerContract.getNextHop.staticCall(source, tag, neighbors);
 
@@ -2643,11 +2643,11 @@
                         const packetId = ethers.id(`${source}-${tag}-${Date.now()}`).substring(0, 66);
 
                         term.innerHTML = `
-<span style="color:#64748b">Contract view:</span>    <span style="color:#fff">PCERRouting#getNextHop</span><br>
-<span style="color:#64748b">Call type:</span>        <span style="color:#22c55e">staticCall (0 gas consumed)</span><br>
-<span style="color:#64748b">Source:</span>           <span style="color:#94a3b8">#${source}</span>  <span style="color:#64748b">→ Best Hop:</span> <span style="color:#fff">#${bestHop}</span><br>
-<span style="color:#64748b">Min cost:</span>         <span style="color:#10b981">${minCost}</span><br>
-<span style="color:#f59e0b">⟳ Logging path on-chain…</span>`;
+<span style="color:#64748b">Contract view:</span>    <span style="color:#1e293b">PCERRouting#getNextHop</span><br>
+<span style="color:#64748b">Call type:</span>        <span style="color:#15803d">staticCall (0 gas consumed)</span><br>
+<span style="color:#64748b">Source:</span>           <span style="color:#475569">#${source}</span>  <span style="color:#64748b">→ Best Hop:</span> <span style="color:#1e293b">#${bestHop}</span><br>
+<span style="color:#64748b">Min cost:</span>         <span style="color:#059669">${minCost}</span><br>
+<span style="color:#b45309">⟳ Logging path on-chain…</span>`;
 
                         // Phase 2: CHEAP state-changing logPath tx
                         const tx = await pcerContract.logPath(packetId, source, bestHop, minCost, tag);
@@ -2655,14 +2655,14 @@
                         document.getElementById('web3Gas').innerText = receipt.gasUsed.toString();
 
                         term.innerHTML = `
-<span style="color:#64748b">Contract view:</span>    <span style="color:#fff">PCERRouting#getNextHop (staticCall)</span><br>
-<span style="color:#64748b">Gas consumed:</span>     <span style="color:#22c55e">0 (zero-cost routing decision)</span><br>
-<span style="color:#64748b">Source #${source}</span>  →  <span style="color:#fff">Hop #${bestHop}</span>  |  Cost: <span style="color:#10b981">${minCost}</span><br>
-<span style="color:#f59e0b">─── Audit Trail (PathSelected event) ───</span><br>
-<span style="color:#64748b">logPath tx:</span>       <span style="color:#38bdf8">${tx.hash}</span><br>
-<span style="color:#64748b">From:</span>             <span style="color:#94a3b8">${tx.from}</span><br>
-<span style="color:#64748b">Gas used:</span>         <span style="color:#10b981">${receipt.gasUsed.toString()}</span>  <span style="color:#475569">(audit-only)</span><br>
-<span style="color:#64748b">Block #${receipt.blockNumber}:</span>     <span style="color:#38bdf8">${receipt.blockHash}</span>`;
+<span style="color:#64748b">Contract view:</span>    <span style="color:#1e293b">PCERRouting#getNextHop (staticCall)</span><br>
+<span style="color:#64748b">Gas consumed:</span>     <span style="color:#15803d">0 (zero-cost routing decision)</span><br>
+<span style="color:#64748b">Source #${source}</span>  →  <span style="color:#1e293b">Hop #${bestHop}</span>  |  Cost: <span style="color:#059669">${minCost}</span><br>
+<span style="color:#b45309">─── Audit Trail (PathSelected event) ───</span><br>
+<span style="color:#64748b">logPath tx:</span>       <span style="color:#0e7490">${tx.hash}</span><br>
+<span style="color:#64748b">From:</span>             <span style="color:#475569">${tx.from}</span><br>
+<span style="color:#64748b">Gas used:</span>         <span style="color:#059669">${receipt.gasUsed.toString()}</span>  <span style="color:#94a3b8">(audit-only)</span><br>
+<span style="color:#64748b">Block #${receipt.blockNumber}:</span>     <span style="color:#0e7490">${receipt.blockHash}</span>`;
                     } catch (e) {
                         console.error("Web3 routing error:", e);
                     }
