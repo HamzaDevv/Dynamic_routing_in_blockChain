@@ -1,0 +1,154 @@
+
+1
+
+Automatic Zoom
+TO WHOM IT MAY CONCERN
+This is to certify that Ameer Hamza Khan, Enrollment No. 2022ITB087, Jeet Choudahry,
+Enrollment No. 2022ITB089, and Anurag Kumar, Enrollment No. 2022ITB094, have
+completed their B.Tech Final Year Project on “Priority-Coupled Elastic Routing (PCER).”
+They have successfully completed the project under the guidance of Dr. Surajit Kumar
+Roy. The report has fulfilled all the requirements as per the regulations of the institute and
+has reached the standard needed for submission.
+Prof. Tuhina Samanta
+Head of the Department
+Department of Information Technology
+Dr. Surajit Kumar Roy
+Professor
+Department of Information Technology
+Acknowledgement
+We would like to express our deepest gratitude to our supervisor, Dr. Surajit Kumar Roy,
+for his valuable guidance, support, and encouragement throughout our project on “Priority-
+Coupled Elastic Routing (PCER).” His insights and expertise have been instrumental in
+the successful completion of this work. We are thankful for his continuous support in under-
+standing distributed systems concepts and implementing this peer-to-peer architecture.
+Ameer Hamza Khan (2022ITB087)
+Jeet Choudahry (2022ITB089)
+Anurag Kumar (2022ITB094)
+i
+Contents
+Acknowledgement i
+Abstract iv
+1 Introduction 1
+1.1 Background . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 1
+1.2 The Problem Statement . . . . . . . . . . . . . . . . . . . . . . . . . . . . 1
+1.3 Proposed Solution . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+2 Literature Review 3
+2.1 Application Layer Optimization: The PerBlocks Approach . . . . . . . . . 3
+2.2 Network Layer Optimization: The FlexRout Approach . . . . . . . . . . . 4
+2.3 Elaborate Research Gap Analysis . . . . . . . . . . . . . . . . . . . . . . . 5
+2.3.1 The Context-Blindness of Network Layers . . . . . . . . . . . . . 5
+2.3.2 The Routing-Blindness of Application Layers . . . . . . . . . . . . 6
+2.3.3 Summary of Deficiencies . . . . . . . . . . . . . . . . . . . . . . . 6
+3 Proposed Methodology 8
+3.1 System Architecture . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+3.2 Phase 1: Header Injection Logic . . . . . . . . . . . . . . . . . . . . . . . 9
+3.3 Phase 2: Dynamic Path Scoring . . . . . . . . . . . . . . . . . . . . . . . 9
+4 Implementation Plan 11
+4.1 Project Directory Structure . . . . . . . . . . . . . . . . . . . . . . . . . . 11
+4.2 Traffic Generation (Python) . . . . . . . . . . . . . . . . . . . . . . . . . . 11
+ii
+4.3 Network Simulation (NS-3) . . . . . . . . . . . . . . . . . . . . . . . . . . 13
+5 Achieved Results 15
+5.1 Latency Reduction for Critical Data . . . . . . . . . . . . . . . . . . . . . 15
+5.2 Network Lifetime Sustainability . . . . . . . . . . . . . . . . . . . . . . . 16
+6 Conclusion 17
+iii
+Abstract
+In the rapidly evolving landscape of the Industrial Internet of Things (IIoT), the generation of
+heterogeneous data—ranging from critical safety alerts to routine operational logs—presents
+unique challenges for data management and transmission. Blockchain technology offers a
+decentralized and secure solution for IIoT data; however, conventional blockchain architec-
+tures suffer from scalability bottlenecks and inefficient resource utilization when handling
+diverse data types.
+Existing research has addressed these issues in isolation: ”PerBlocks” optimizes data
+packaging at the application layer through dynamic consensus, while ”FlexRout” optimizes
+transmission paths at the network layer through predictive routing. Despite these advance-
+ments, a critical disconnect remains: the network layer is blind to the urgency of the data it
+transports.
+This project introduces Priority-Coupled Elastic Routing (PCER), a novel cross-layer
+”handshake” protocol that integrates application-layer data classification with network-layer
+routing logic. By injecting an ”Urgency Meta-Tag” into data packets, PCER dynamically
+alters the routing cost function, creating a virtual ”ambulance lane” for critical data and a
+”cargo lane” for bulk data. This approach aims to significantly reduce latency for emergency
+signals while maximizing network longevity for routine traffic.
+iv
+Chapter 1
+Introduction
+1.1 Background
+The Industrial Internet of Things (IIoT) connects varying physical sensors and actuators to
+the digital world. In a typical smart factory, a temperature sensor might generate a routine log
+every second, while a pressure valve might generate a critical failure alarm once a year. Both
+data points must be stored immutably, making Blockchain (BC) an ideal storage solution.
+However, the requirements for these two data points are vastly different: the log requires
+high throughput and storage efficiency, while the alarm requires ultra-low latency.
+1.2 The Problem Statement
+Current state-of-the-art research addresses these requirements in silos, leading to a ”Context-
+Blindness” gap:
+1. Application Layer Blindness: Intelligent middleware (e.g., PerBlocks) can success-
+fully identify and package critical data using fast consensus mechanisms (like PBFT).
+However, once the block is created, it is dumped into the network without any instruc-
+tions on how fast it should be delivered.
+2. Network Layer Blindness: Intelligent routing protocols (e.g., FlexRout) calculate
+the ”healthiest” path based on battery life and bandwidth to extend network longevity.
+However, they treat a critical fire alarm exactly the same as a routine log.
+Consequence: A critical safety alert might be routed through a slower, energy-saving
+path because the routing algorithm is trying to ”save battery,” resulting in dangerous delays
+in industrial emergency response.
+1
+1.3 Proposed Solution
+We propose Priority-Coupled Elastic Routing (PCER), a cross-layer optimization frame-
+work. PCER establishes a vertical communication interface between the Application Layer
+(PerBlocks) and the Network Layer (FlexRout).
+The core mechanism involves:
+• Header Injection: The middleware tags data as Critical (00), Standard (01), or Bulk
+(10).
+• Dynamic Weighting: The router reads this tag and dynamically adjusts the weights
+(w1, w2) of its path-finding algorithm.
+2
+Chapter 2
+Literature Review
+This section analyzes the two foundational papers that form the basis of the PCER framework
+and presents a detailed analysis of the research gaps present in the current state of the art.
+2.1 Application Layer Optimization: The PerBlocks Approach
+Tapwal et al. (2024) proposed ”PerBlocks,” a reconfigurable blockchain architecture de-
+signed to handle heterogeneous data rates.
+• Mechanism: PerBlocks utilizes a Deep Reinforcement Learning (DRL) agent at the
+middleware level. It predicts the incoming data rate and dynamically adjusts:
+1. Block Size: To prevent waiting times for block formation.
+2. Consensus Mechanism: Switching between PBFT (fast, for real-time needs)
+and PoW (secure, for routine needs).
+• Key Finding: The paper demonstrates that selecting the appropriate consensus mech-
+anism improves Quality of Service (QoS) by approximately 60% compared to static
+blockchain implementations.
+• Limitation: The optimization stops at block creation. The transmission of these
+blocks across the Peer-to-Peer (P2P) network relies on standard, unoptimized flooding
+or random routing.
+3
+Figure 2.1: PerBlocks Architecture showing the Middleware and Reconfigurable BC
+2.2 Network Layer Optimization: The FlexRout Approach
+Das et al. (2025) proposed ”FlexRout,” a dynamic routing protocol for blockchain networks.
+• Mechanism: FlexRout addresses the instability of P2P networks where miners (nodes)
+frequently leave. It uses a predictive model to identify nodes likely to fail or leave the
+network. It calculates a ”Path Score” (P(i)) to route data away from these unstable
+nodes, ensuring high packet delivery ratios.
+• Key Finding: FlexRout reduces traffic redundancy by 49% and latency by 50% by
+maintaining a stable topology.
+• Limitation: The path selection is purely resource-aware. It aims to preserve the global
+energy of the network. It does not possess a mechanism to prioritize a specific packet
+that requires immediate delivery regardless of the energy cost.
+4
+Figure 2.2: FlexRout Framework showing Prediction and Switching phases
+2.3 Elaborate Research Gap Analysis
+While both PerBlocks and FlexRout represent significant advancements in their respective
+domains, a critical disconnect exists when they are deployed in a unified IIoT environment.
+This ”Cross-Layer Gap” leads to suboptimal performance for critical applications. The gap
+can be analyzed through three primary dimensions: Context Awareness, Resource Utiliza-
+tion, and Transmission Latency.
+2.3.1 The Context-Blindness of Network Layers
+Conventional and even advanced routing protocols like FlexRout operate under a ”Content-
+Agnostic” paradigm. FlexRout optimizes for the container (the network health) rather than
+the content (the data urgency).
+• The Gap: FlexRout calculates a path score P(i) based on node battery life and link
+stability. If a path is ”healthy” but ”slow,” FlexRout may still select it to preserve
+energy.
+5
