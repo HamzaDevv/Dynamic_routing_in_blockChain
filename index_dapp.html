@@ -2054,6 +2054,21 @@
                 if (p.trail.length > 22) p.trail.shift();
                 if (p.progress >= 1) {
                     p.currentIdx++; p.progress = 0;
+                    // ── Per-hop link-layer drop (PDR simulation) ──────────
+                    // Each node has a chance of dropping based on (1 - trust).
+                    // Baseline routes through low-trust nodes blindly → more drops.
+                    // Trust-aware protocols avoid bad nodes → fewer drops.
+                    const hopNode = nodes[p.path[p.currentIdx]];
+                    if (hopNode && hopNode.id !== DEST && hopNode.id !== 0) {
+                        const hopTrust = trust[hopNode.id] ?? 0.7;
+                        const dropProb = (1 - hopTrust) * 0.12; // ~1.2% at trust=0.9, ~7% at trust=0.4
+                        if (Math.random() < dropProb) {
+                            p.alive = false; p.failReason = 'link_drop';
+                            recordDelivery(p, false);
+                            log(`📡 Packet dropped at Node ${hopNode.id} (${hopNode.label}) — link PDR loss [trust=${hopTrust.toFixed(2)}]`, 'fail');
+                            continue;
+                        }
+                    }
                     p.ttl--; if(p.ttl <= 0) { p.alive = false; p.failReason = "ttl"; recordDelivery(p, false); log("Packet dropped (TTL expired during loops)", "fail"); } else if (p.path[p.currentIdx] === p.failedAt) { p.alive = false; recordDelivery(p, false); }
                     else if (p.currentIdx >= p.path.length - 1) { p.alive = false; recordDelivery(p, true); }
                 }
