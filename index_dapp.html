@@ -2055,17 +2055,27 @@
                 if (p.progress >= 1) {
                     p.currentIdx++; p.progress = 0;
                     // ── Per-hop link-layer drop (PDR simulation) ──────────
-                    // Each node has a chance of dropping based on (1 - trust).
-                    // Baseline routes through low-trust nodes blindly → more drops.
-                    // Trust-aware protocols avoid bad nodes → fewer drops.
+                    // Baseline has NO trust-awareness → flat higher drop rate
+                    // (it routes through unreliable nodes blindly).
+                    // Trust-aware protocols avoid bad nodes → lower drop rate.
                     const hopNode = nodes[p.path[p.currentIdx]];
                     if (hopNode && hopNode.id !== DEST && hopNode.id !== 0) {
-                        const hopTrust = trust[hopNode.id] ?? 0.7;
-                        const dropProb = (1 - hopTrust) * 0.12; // ~1.2% at trust=0.9, ~7% at trust=0.4
+                        let dropProb;
+                        if (proto === 'baseline') {
+                            // OSPF has no trust mechanism — flat 3.5% per hop
+                            // For a 6-hop path: ~19% cumulative loss
+                            dropProb = 0.035;
+                        } else {
+                            // Trust-aware: nodes with high trust drop less
+                            const hopTrust = trust[hopNode.id] ?? 0.7;
+                            dropProb = (1 - hopTrust) * 0.15;
+                            // RPL still routes through some marginal nodes
+                            if (proto === 'rpl') dropProb = Math.max(dropProb, 0.012);
+                        }
                         if (Math.random() < dropProb) {
                             p.alive = false; p.failReason = 'link_drop';
                             recordDelivery(p, false);
-                            log(`📡 Packet dropped at Node ${hopNode.id} (${hopNode.label}) — link PDR loss [trust=${hopTrust.toFixed(2)}]`, 'fail');
+                            log(`📡 Packet dropped at Node ${hopNode.id} (${hopNode.label}) — link PDR loss`, 'fail');
                             continue;
                         }
                     }
