@@ -2,8 +2,10 @@
   "version": 2,
   "cleanUrls": true,
   "rewrites": [
+    { "source": "/v1", "destination": "/index_v1.html" },
     { "source": "/v2", "destination": "/index_v2.html" },
-    { "source": "/v3", "destination": "/index_v3.html" }
+    { "source": "/v3", "destination": "/index_v3.html" },
+    { "source": "/dapp", "destination": "/index_dapp.html" }
   ],
   "headers": [
     {
