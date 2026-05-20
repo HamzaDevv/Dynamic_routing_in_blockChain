@@ -1069,7 +1069,6 @@
                 <div class="status-chip">
                     <div class="pulse-dot" id="pulseDot"></div>
                     <span id="simStatus">IDLE</span>
-                    <span id="simTimer" style="margin-left:6px;color:var(--muted);font-size:10px;font-family:'Share Tech Mono',monospace">0.0s</span>
                 </div>
             </div>
             <div class="proto-bar" id="protoBar">
@@ -1491,7 +1490,7 @@
             <button class="btn btn-play" id="btnPlay">▶ Start</button>
             <button class="btn btn-pause" id="btnPause" style="display:none">⏸ Pause</button>
             <button class="btn btn-reset" id="btnReset">↺ Reset</button>
-            <button class="btn btn-v4" id="btnAutoRun" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);border-color:#8b5cf6;color:#ede9fe" title="Auto-run all 4 protocols for 120s each with identical initial conditions, then export all CSVs">🔁 Auto-Run All</button>
+            <button class="btn btn-v4" id="btnExport" style="background:linear-gradient(135deg,#065f46,#047857);border-color:#10b981" title="Export real simulation data as CSV for Python charting">⬇ Export Data</button>
 
             <button class="btn btn-crit" id="btnCrit">🚨 Inject Critical</button>
             <button class="btn btn-atk" id="btnKill">💀 Kill Node</button>
@@ -1537,21 +1536,21 @@
         const nodeDefs = [
             { id: 0, label: 'Router', icon: '🌐', type: 'mains', initBat: 1.0 },
             { id: 1, label: 'Smart TV', icon: '📺', type: 'mains', initBat: 1.0 },
-            { id: 2, label: 'Security Cam', icon: '📷', type: 'fast', initBat: 0.85 },
-            { id: 3, label: 'Smoke Alarm', icon: '🚨', type: 'med', initBat: 0.90 },
+            { id: 2, label: 'Security Cam', icon: '📷', type: 'fast', initBat: 0.20 },
+            { id: 3, label: 'Smoke Alarm', icon: '🚨', type: 'med', initBat: 0.8 },
             { id: 4, label: 'Laptop', icon: '💻', type: 'mains', initBat: 1.0 },
-            { id: 5, label: 'Thermostat', icon: '🌡️', type: 'med', initBat: 0.75 },
+            { id: 5, label: 'Thermostat', icon: '🌡️', type: 'med', initBat: 0.3 },
             { id: 6, label: 'Fridge', icon: '🧊', type: 'mains', initBat: 1.0 },
-            { id: 7, label: 'Doorbell', icon: '🚪', type: 'med', initBat: 0.80 },
-            { id: 8, label: 'Smart Watch', icon: '⌚', type: 'fast', initBat: 0.70 },
+            { id: 7, label: 'Doorbell', icon: '🚪', type: 'med', initBat: 0.4 },
+            { id: 8, label: 'Smart Watch', icon: '⌚', type: 'fast', initBat: 0.15 },
             { id: 9, label: 'Light Bulb', icon: '💡', type: 'mains', initBat: 1.0 },
-            { id: 10, label: 'Heart Mon.', icon: '🫀', type: 'fast', initBat: 0.90 },
+            { id: 10, label: 'Heart Mon.', icon: '🫀', type: 'fast', initBat: 0.6 },
             { id: 11, label: 'AC Unit', icon: '❄️', type: 'mains', initBat: 1.0 },
             { id: 12, label: 'Oven', icon: '♨️', type: 'mains', initBat: 1.0 },
-            { id: 13, label: 'Tablet', icon: '📱', type: 'med', initBat: 0.85 },
+            { id: 13, label: 'Tablet', icon: '📱', type: 'med', initBat: 0.5 },
             { id: 14, label: 'Speaker', icon: '🔊', type: 'mains', initBat: 1.0 },
-            { id: 15, label: 'Drone', icon: '🚁', type: 'fast', initBat: 0.80 },
-            { id: 16, label: 'Sensor', icon: '📡', type: 'med', initBat: 0.90 },
+            { id: 15, label: 'Drone', icon: '🚁', type: 'fast', initBat: 0.25 },
+            { id: 16, label: 'Sensor', icon: '📡', type: 'med', initBat: 0.7 },
             { id: 17, label: 'Cloud', icon: '☁️', type: 'mains', initBat: 1.0 },
         ];
 
@@ -1599,6 +1598,13 @@
         let etxMap = {};           // "u_v" → ETX value
         let prevBestHop = {};      // source-node → nodeId (hysteresis memory)
         let hysteresisBlocks = 0;  // times hysteresis prevented a switch
+
+        // ── Automated Benchmark Sweep ──────────────────────────────────
+        let sweepActive = false;
+        let sweepStartTime = 0;
+        let sweepIndex = 0;
+        const SWEEP_DURATION_PER_PROTO = 120.0;
+        const SWEEP_PROTOCOLS = ['baseline', 'rpl', 'pcertv3', 'pcertv4'];
 
         const stats = {
             baseline: { latSum: 0, cnt: 0, lost: 0, latencies: [],
@@ -1776,7 +1782,7 @@
             const qLoad = Math.min(1.0, (loadCount[vn.id] || 0) / 10.0);
             let congestionPenalty = 0;
             if (qLoad > 0.8) {
-                congestionPenalty = Math.pow((qLoad - 0.8) / 0.2, 2) * 40.0;
+                congestionPenalty = Math.pow((qLoad - 0.8) / 0.2, 2) * 200.0;
             } else if (qLoad > 0.5) {
                 congestionPenalty = (qLoad - 0.5) * 20.0;
             }
@@ -1813,7 +1819,7 @@
             const qLoad = Math.min(1.0, (loadCount[vn.id] || 0) / 10.0);
             let congestionPenalty = 0;
             if (qLoad > 0.8) {
-                congestionPenalty = Math.pow((qLoad - 0.8) / 0.2, 2) * 40.0;
+                congestionPenalty = Math.pow((qLoad - 0.8) / 0.2, 2) * 200.0;
             } else if (qLoad > 0.5) {
                 congestionPenalty = (qLoad - 0.5) * 20.0;
             }
@@ -1947,7 +1953,7 @@
                 tag, path, cost, currentIdx: 0, progress: 0, alive: true, trail: [],
                 failedAt: failed ? path[path.length - 1] : -1, failReason,
                 idealTail: failed ? getIdealTail(path[path.length - 1]) : null,
-                lbTag: false, ttl: 15, spawnTime: performance.now(), spawnSimTime: simTime,
+                lbTag: false, ttl: 15, spawnTime: performance.now(),
             };
             packets.push(p);
             updateRoutingPanel(p, firstAnalysis, path);
@@ -1966,21 +1972,15 @@
                 s.tagLost[p.tag]++;
             }
             // Real data log for CSV export
-            const simLatency = simTime - (p.spawnSimTime || 0); // sim-time based latency
             packetLog.push({
-                time:       simTime.toFixed(2),
+                time:    simTime.toFixed(2),
                 proto,
-                tag:        p.tag,
-                tagName:    TAG_NAMES[p.tag],
-                latency:    p.cost.toFixed(3),
-                simLatency: simLatency.toFixed(4),
-                latencyMs:  latMs.toFixed(1),
-                success:    success ? 1 : 0,
-                hops:       p.path ? p.path.length - 1 : 0,
-                path:       p.path ? p.path.join('>') : '',
+                tag:     p.tag,
+                latency: p.cost.toFixed(3),
+                latencyMs: latMs.toFixed(1),
+                success: success ? 1 : 0,
+                hops:    p.path ? p.path.length - 1 : 0,
                 failReason: success ? '' : (p.failReason || 'unknown'),
-                srcNode:    p.path ? p.path[0] : '',
-                batteryMin: p.path ? Math.min(...p.path.map(id => (nodes[id]?.battery ?? 1) * 100)).toFixed(1) : '',
             });
             updateScorecards();
         }
@@ -1988,6 +1988,45 @@
         // ── Tick ──────────────────────────────────────────────────────
         function tick(dt) {
             simTime += dt;
+
+            // ── Automated Sweep Check ──────────────────────────────────────
+            if (sweepActive) {
+                const sweepElapsed = simTime - sweepStartTime;
+                if (sweepElapsed >= SWEEP_DURATION_PER_PROTO) {
+                    sweepIndex++;
+                    if (sweepIndex < SWEEP_PROTOCOLS.length) {
+                        const nextProto = SWEEP_PROTOCOLS[sweepIndex];
+                        log(`✨ [Sweep] Protocol finished! Switching to ${PROTONAMES[nextProto]}`, 'sys');
+                        setProto(nextProto);
+                        
+                        // Reset everything back to healthy starting state for the next run
+                        initAll();
+                        packets = [];
+                        
+                        sweepStartTime = simTime;
+                    } else {
+                        // Sweep complete!
+                        sweepActive = false;
+                        playing = false;
+                        
+                        // Restore 1x speed
+                        speed = 1.0;
+                        document.getElementById('spdVal').textContent = '1×';
+                        document.getElementById('spdSlider').value = 2; // matches 1x
+                        
+                        // Pause the UI status
+                        document.getElementById('pulseDot').classList.remove('active');
+                        document.getElementById('simStatus').textContent = 'PAUSED';
+                        document.getElementById('btnPlay').style.display = '';
+                        document.getElementById('btnPause').style.display = 'none';
+                        
+                        log(`🎉 [Sweep Complete] Ran all 4 protocols for 120s each! Exporting now...`, 'sys');
+                        alert("Automated Benchmark Sweep Complete!\n\nAll 4 protocols were successfully evaluated for 120 seconds each under identical starting conditions.\n\nClick OK to download your telemetry CSV files.");
+                        triggerCSVExport();
+                    }
+                }
+            }
+
             // ETX slow recovery
             etxRecovery(dt);
 
@@ -2008,7 +2047,7 @@
             nodes.forEach(n => {
                 if (n.type === 'mains') { n.battery = 1; }
                 else if (n.battery > 0) {
-                    const dr = n.type === 'fast' ? 0.0025 : 0.0008;
+                    const dr = n.type === 'fast' ? 0.013 : 0.004;
                     n.battery = Math.max(0, n.battery - dr * dt);
                     if (n.battery === 0 && !n.dead) {
                         n.dead = true;
@@ -2021,11 +2060,7 @@
             if (simTime >= nextSpawn) {
                 spawnPacket();
                 nextSpawn = simTime + (0.26 + Math.random() * 0.5) * injectionRateMultiplier;
-                // Exponential load decay every tick — prevents monotonic growth and cost saturation
-                for (const k in loadCount) {
-                    loadCount[k] = Math.max(0, (loadCount[k] || 0) * (1 - 0.3 * dt));
-                    if (loadCount[k] < 0.01) loadCount[k] = 0;
-                }
+                if (Math.floor(simTime) % 10 === 0) { for (const k in loadCount) loadCount[k] = Math.max(0, (loadCount[k] || 0) - 1); }
             }
 
             
@@ -2047,38 +2082,32 @@
     
             for (const p of packets) {
                 if (!p.alive) continue;
+                
+                // Guard against packets with no valid route from the source node
+                if (!p.path || p.path.length <= 1) {
+                    p.alive = false;
+                    recordDelivery(p, false);
+                    log(`❌ Packet route failed: no path from source #${p.path?.[0] ?? 'unknown'}`, 'fail');
+                    continue;
+                }
+
                 p.progress += spd * dt;
-                const u = nodes[p.path[p.currentIdx]], v = nodes[p.path[p.currentIdx + 1]];
+                const u = nodes[p.path[p.currentIdx]];
+                const v = nodes[p.path[p.currentIdx + 1]];
+                
+                // Guard against undefined next-hop node 'v'
+                if (!v) {
+                    p.alive = false;
+                    recordDelivery(p, false);
+                    log(`❌ Packet route failed: broken path at hop #${p.path[p.currentIdx]}`, 'fail');
+                    continue;
+                }
+
                 const pos = { x: u.x + (v.x - u.x) * p.progress, y: u.y + (v.y - u.y) * p.progress };
                 p.trail.push({ x: pos.x, y: pos.y, age: 0 });
                 if (p.trail.length > 22) p.trail.shift();
                 if (p.progress >= 1) {
                     p.currentIdx++; p.progress = 0;
-                    // ── Per-hop link-layer drop (PDR simulation) ──────────
-                    // Baseline has NO trust-awareness → flat higher drop rate
-                    // (it routes through unreliable nodes blindly).
-                    // Trust-aware protocols avoid bad nodes → lower drop rate.
-                    const hopNode = nodes[p.path[p.currentIdx]];
-                    if (hopNode && hopNode.id !== DEST && hopNode.id !== 0) {
-                        let dropProb;
-                        if (proto === 'baseline') {
-                            // OSPF has no trust mechanism — flat 3.5% per hop
-                            // For a 6-hop path: ~19% cumulative loss
-                            dropProb = 0.035;
-                        } else {
-                            // Trust-aware: nodes with high trust drop less
-                            const hopTrust = trust[hopNode.id] ?? 0.7;
-                            dropProb = (1 - hopTrust) * 0.15;
-                            // RPL still routes through some marginal nodes
-                            if (proto === 'rpl') dropProb = Math.max(dropProb, 0.012);
-                        }
-                        if (Math.random() < dropProb) {
-                            p.alive = false; p.failReason = 'link_drop';
-                            recordDelivery(p, false);
-                            log(`📡 Packet dropped at Node ${hopNode.id} (${hopNode.label}) — link PDR loss`, 'fail');
-                            continue;
-                        }
-                    }
                     p.ttl--; if(p.ttl <= 0) { p.alive = false; p.failReason = "ttl"; recordDelivery(p, false); log("Packet dropped (TTL expired during loops)", "fail"); } else if (p.path[p.currentIdx] === p.failedAt) { p.alive = false; recordDelivery(p, false); }
                     else if (p.currentIdx >= p.path.length - 1) { p.alive = false; recordDelivery(p, true); }
                 }
@@ -2391,74 +2420,7 @@
             makeLBar('lb3', 'PCER-T v4', '#08c8e8', v4.cnt, v4.lost);
         }
 
-        // ── Shared CSV download utility ────────────────────────────────
-        function downloadCSV(filename, rows) {
-            if (!rows || rows.length === 0) return;
-            const keys = Object.keys(rows[0]);
-            const csv  = [keys.join(','),
-                ...rows.map(r => keys.map(k => JSON.stringify(r[k] ?? '')).join(','))
-            ].join('\n');
-            const a = Object.assign(document.createElement('a'), {
-                href: URL.createObjectURL(new Blob([csv], {type:'text/csv'})),
-                download: filename,
-            });
-            a.click();
-            URL.revokeObjectURL(a.href);
-        }
-
-        // ── Auto-export helper (called before every protocol switch) ──
-        function autoExportCurrentProto() {
-            const outProto = proto;
-            const s = stats[outProto];
-            const hasData = (s && (s.cnt + s.lost) > 0) || batteryLog.some(r => r.proto === outProto);
-            if (!hasData) return; // nothing collected yet — skip silently
-
-            // Filter logs to only the outgoing protocol
-            const bRows = batteryLog.filter(r => r.proto === outProto);
-            const pRows = packetLog.filter(r  => r.proto === outProto);
-
-            if (bRows.length > 0) downloadCSV(`battery_log_${outProto}.csv`, bRows);
-            if (pRows.length > 0) downloadCSV(`packet_log_${outProto}.csv`, pRows);
-
-            // Per-protocol summary row
-            const total = s.cnt + s.lost;
-            const summaryRows = [{
-                protocol:          outProto,
-                packets_delivered: s.cnt,
-                packets_dropped:   s.lost,
-                total_packets:     total,
-                loss_rate_pct:     total > 0 ? ((s.lost / total) * 100).toFixed(2) : 0,
-                avg_latency:       s.cnt > 0 ? (s.latSum / s.cnt).toFixed(4) : 0,
-                crit_delivered:    s.tagCnt?.[0] ?? 0,
-                crit_dropped:      s.tagLost?.[0] ?? 0,
-                std_delivered:     s.tagCnt?.[1] ?? 0,
-                std_dropped:       s.tagLost?.[1] ?? 0,
-                bulk_delivered:    s.tagCnt?.[2] ?? 0,
-                bulk_dropped:      s.tagLost?.[2] ?? 0,
-                sim_time_s:        simTime.toFixed(1),
-            }];
-            downloadCSV(`simulation_summary_${outProto}.csv`, summaryRows);
-
-            log(`⬇ Auto-exported CSV for <b>${PROTONAMES[outProto]}</b> before switch`, 'sys');
-
-            // Toast notification
-            const toast = document.createElement('div');
-            toast.textContent = `⬇ CSV exported for ${PROTONAMES[outProto]}`;
-            Object.assign(toast.style, {
-                position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999,
-                background: '#065f46', color: '#d1fae5', padding: '10px 18px',
-                borderRadius: '10px', fontSize: '13px', fontFamily: 'Rajdhani, sans-serif',
-                fontWeight: '600', boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-                border: '1px solid #10b981', opacity: '1',
-                transition: 'opacity 0.5s ease',
-            });
-            document.body.appendChild(toast);
-            setTimeout(() => { toast.style.opacity = '0'; }, 2200);
-            setTimeout(() => { toast.remove(); }, 2800);
-        }
-
         function setProto(p) {
-
             proto = p;
             document.querySelectorAll('.pb').forEach(b => {
                 b.className = 'pb';
@@ -2488,12 +2450,7 @@
             if (!lastFrame) lastFrame = ts;
             const dt = Math.min((ts - lastFrame) / 1000, 0.1) * speed;
             lastFrame = ts;
-            if (playing) {
-                tick(dt);
-                // Update sim timer display
-                const timerEl = document.getElementById('simTimer');
-                if (timerEl) timerEl.textContent = simTime.toFixed(1) + 's';
-            }
+            if (playing) tick(dt);
             render();
             requestAnimationFrame(loop);
         }
@@ -2535,26 +2492,22 @@
                 document.getElementById('btnPause').style.display = 'none';
             };
             document.getElementById('btnReset').onclick = () => {
-                playing = false;
-                initAll(); packets = []; simTime = 0; nextSpawn = 0; lastFrame = 0;
-                backpressureActive = false; injectionRateMultiplier = 1.0;
-                batteryLog.length = 0;
-                packetLog.length = 0;
+                initAll(); packets = []; simTime = 0; nextSpawn = 0;
+                batteryLog.length = 0; // Clear collected battery log
+                packetLog.length = 0;  // Clear collected packet log
                 lastBatterySnapshotTime = 0;
-                // Reset ALL protocol stats (not just the current one)
-                stats.baseline = { latSum: 0, cnt: 0, lost: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
-                stats.rpl = { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
-                stats.pcertv3 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
-                stats.pcertv4 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                if (proto === 'baseline') stats.baseline = { latSum: 0, cnt: 0, lost: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                else if (proto === 'rpl') stats.rpl = { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                else if (proto === 'pcertv3') stats.pcertv3 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                else if (proto === 'pcertv4') stats.pcertv4 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
                 updateScorecards();
                 document.getElementById('elog').innerHTML = '';
-                document.getElementById('costList').innerHTML = '<div style="padding:14px;color:var(--muted2);font-size:11px;font-style:italic;font-family:\'Rajdhani\',sans-serif">Waiting for first packet...</div>';
                 document.getElementById('pulseDot').classList.remove('active');
                 document.getElementById('simStatus').textContent = 'IDLE';
-                document.getElementById('simTimer').textContent = '0.0s';
                 document.getElementById('btnPlay').style.display = '';
                 document.getElementById('btnPause').style.display = 'none';
-                log('Network reset — batteries, ETX, trust, all stats, and logs re-initialised', 'sys');
+                playing = false;
+                log('Network reset — batteries, ETX, trust, and logs re-initialised', 'sys');
             };
             document.getElementById('btnCrit').onclick = () => spawnPacket(0);
             
@@ -2587,147 +2540,115 @@
     
             document.getElementById('btnDegrade').onclick = degradeRandomLinkETX;
 
-
-
-            // ── Auto-Run All Protocols ────────────────────────────────────
-            // Runs each protocol for AUTO_RUN_DURATION sim-seconds at max speed
-            // with identical initial conditions, exports CSVs after each.
-            const AUTO_RUN_DURATION = 120; // sim-seconds per protocol
-            const AUTO_RUN_PROTOS = ['baseline', 'rpl', 'pcertv3', 'pcertv4'];
-            let autoRunActive = false;
-            let autoRunPhase = 0;
-            let autoRunCollectedBattery = [];
-            let autoRunCollectedPackets = [];
-            let autoRunSummaries = [];
-
-            function doAutoReset() {
-                playing = false;
-                initAll(); packets = []; simTime = 0; nextSpawn = 0; lastFrame = 0;
-                backpressureActive = false; injectionRateMultiplier = 1.0;
-                batteryLog.length = 0;
-                packetLog.length = 0;
-                lastBatterySnapshotTime = 0;
-                stats.baseline = { latSum: 0, cnt: 0, lost: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
-                stats.rpl = { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
-                stats.pcertv3 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
-                stats.pcertv4 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
-                updateScorecards();
-                document.getElementById('elog').innerHTML = '';
+            // ── Export Data Button ─────────────────────────────────────────
+            function downloadCSV(filename, rows) {
+                const keys = Object.keys(rows[0]);
+                const csv  = [keys.join(','),
+                    ...rows.map(r => keys.map(k => JSON.stringify(r[k] ?? '')).join(','))
+                ].join('\n');
+                const a = Object.assign(document.createElement('a'), {
+                    href: URL.createObjectURL(new Blob([csv], {type:'text/csv'})),
+                    download: filename,
+                });
+                a.click();
+                URL.revokeObjectURL(a.href);
             }
 
-            function autoRunStep() {
-                if (!autoRunActive || autoRunPhase >= AUTO_RUN_PROTOS.length) {
-                    // All protocols done — download combined data
-                    autoRunActive = false;
-                    document.getElementById('btnAutoRun').textContent = '🔁 Auto-Run All';
-                    document.getElementById('btnAutoRun').style.background = 'linear-gradient(135deg,#7c3aed,#6d28d9)';
+            function triggerCSVExport() {
+                if (batteryLog.length === 0 && packetLog.length === 0) {
+                    alert('No data yet! Run the simulation for at least 30 seconds first, then export.');
+                    return;
+                }
 
-                    if (autoRunCollectedBattery.length > 0) downloadCSV('battery_log_ALL.csv', autoRunCollectedBattery);
-                    if (autoRunCollectedPackets.length > 0) downloadCSV('packet_log_ALL.csv', autoRunCollectedPackets);
-                    if (autoRunSummaries.length > 0) downloadCSV('simulation_summary_ALL.csv', autoRunSummaries);
+                // 1. Battery log CSV
+                if (batteryLog.length > 0) downloadCSV('battery_log.csv', batteryLog);
 
-                    log(`✅ AUTO-RUN COMPLETE: ${AUTO_RUN_PROTOS.length} protocols × ${AUTO_RUN_DURATION}s each. All CSVs exported.`, 'sys');
+                // 2. Packet log CSV
+                if (packetLog.length > 0) downloadCSV('packet_log.csv', packetLog);
 
-                    // Toast
-                    const toast = document.createElement('div');
-                    toast.innerHTML = `✅ Auto-Run Complete!<br>${AUTO_RUN_PROTOS.length} protocols × ${AUTO_RUN_DURATION}s exported`;
-                    Object.assign(toast.style, {
-                        position: 'fixed', top: '80px', right: '24px', zIndex: 9999,
-                        background: '#065f46', color: '#d1fae5', padding: '14px 22px',
-                        borderRadius: '10px', fontSize: '14px', fontFamily: 'Rajdhani, sans-serif',
-                        fontWeight: '600', boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-                        border: '1px solid #10b981', lineHeight: '1.5',
+                // 3. Summary CSV (per protocol aggregate)
+                const PROTOCOLS = ['baseline','rpl','pcertv3','pcertv4'];
+                const summaryRows = [];
+                PROTOCOLS.forEach(p => {
+                    const s = stats[p];
+                    const total = s.cnt + s.lost;
+                    summaryRows.push({
+                        protocol: p,
+                        packets_delivered: s.cnt,
+                        packets_dropped:   s.lost,
+                        total_packets:     total,
+                        loss_rate_pct:     total > 0 ? ((s.lost/total)*100).toFixed(2) : 0,
+                        avg_latency:       s.cnt > 0 ? (s.latSum/s.cnt).toFixed(4) : 0,
+                        crit_delivered:    s.tagCnt?.[0] ?? 0,
+                        crit_dropped:      s.tagLost?.[0] ?? 0,
+                        std_delivered:     s.tagCnt?.[1] ?? 0,
+                        std_dropped:       s.tagLost?.[1] ?? 0,
+                        bulk_delivered:    s.tagCnt?.[2] ?? 0,
+                        bulk_dropped:      s.tagLost?.[2] ?? 0,
+                        sim_time_s:        simTime.toFixed(1),
                     });
-                    document.body.appendChild(toast);
-                    setTimeout(() => toast.remove(), 5000);
-                    return;
-                }
+                });
+                downloadCSV('simulation_summary.csv', summaryRows);
 
-                const currentProto = AUTO_RUN_PROTOS[autoRunPhase];
-                doAutoReset();
-                setProto(currentProto);
-
-                const phaseLabel = `[${autoRunPhase + 1}/${AUTO_RUN_PROTOS.length}]`;
-                log(`🔁 AUTO-RUN ${phaseLabel}: Starting ${PROTONAMES[currentProto]} for ${AUTO_RUN_DURATION}s...`, 'sys');
-                document.getElementById('btnAutoRun').textContent = `⏳ ${PROTONAMES[currentProto]} ${phaseLabel}`;
-                document.getElementById('btnAutoRun').style.background = 'linear-gradient(135deg,#b45309,#92400e)';
-
-                // Run at 4× speed using fast tick loop
-                playing = true;
-                document.getElementById('pulseDot').classList.add('active');
-                document.getElementById('simStatus').textContent = 'AUTO-RUN';
-                document.getElementById('btnPlay').style.display = 'none';
-                document.getElementById('btnPause').style.display = '';
-
-                // Set speed to max for auto-run
-                const prevSpeed = speed;
-                speed = 4;
-                document.getElementById('spdSlider').value = '4';
-                document.getElementById('spdVal').textContent = '4×';
-
-                // Monitor sim-time to know when to stop
-                const checkInterval = setInterval(() => {
-                    document.getElementById('simTimer').textContent = simTime.toFixed(1) + 's';
-
-                    if (simTime >= AUTO_RUN_DURATION) {
-                        clearInterval(checkInterval);
-                        playing = false;
-
-                        // Collect data from this run
-                        batteryLog.forEach(row => autoRunCollectedBattery.push({...row}));
-                        packetLog.forEach(row => autoRunCollectedPackets.push({...row}));
-
-                        // Per-protocol summary
-                        const s = stats[currentProto];
-                        const total = s.cnt + s.lost;
-                        autoRunSummaries.push({
-                            protocol: currentProto,
-                            packets_delivered: s.cnt,
-                            packets_dropped: s.lost,
-                            total_packets: total,
-                            loss_rate_pct: total > 0 ? ((s.lost / total) * 100).toFixed(2) : 0,
-                            avg_latency: s.cnt > 0 ? (s.latSum / s.cnt).toFixed(4) : 0,
-                            jitter: getJitter(s.latencies).toFixed(4),
-                            crit_delivered: s.tagCnt?.[0] ?? 0,
-                            crit_dropped: s.tagLost?.[0] ?? 0,
-                            std_delivered: s.tagCnt?.[1] ?? 0,
-                            std_dropped: s.tagLost?.[1] ?? 0,
-                            bulk_delivered: s.tagCnt?.[2] ?? 0,
-                            bulk_dropped: s.tagLost?.[2] ?? 0,
-                            sim_time_s: simTime.toFixed(1),
-                        });
-
-
-
-                        log(`✅ ${PROTONAMES[currentProto]} complete: ${s.cnt} delivered, ${s.lost} lost (${total > 0 ? ((s.lost/total)*100).toFixed(1) : 0}% loss)`, 'sys');
-
-                        // Move to next protocol
-                        autoRunPhase++;
-                        setTimeout(autoRunStep, 800); // Brief pause between protocols
-                    }
-                }, 200);
+                log(`⬇ Exported: battery_log.csv, packet_log.csv, simulation_summary.csv`, 'sys');
             }
 
-            document.getElementById('btnAutoRun').onclick = () => {
-                if (autoRunActive) {
-                    // Cancel auto-run
-                    autoRunActive = false;
-                    playing = false;
-                    document.getElementById('btnAutoRun').textContent = '🔁 Auto-Run All';
-                    document.getElementById('btnAutoRun').style.background = 'linear-gradient(135deg,#7c3aed,#6d28d9)';
-                    document.getElementById('pulseDot').classList.remove('active');
-                    document.getElementById('simStatus').textContent = 'CANCELLED';
-                    log('❌ Auto-Run cancelled by user', 'fail');
-                    return;
-                }
+            document.getElementById('btnExport').onclick = () => {
+                const runSweep = confirm(
+                    "Would you like to execute an Automated Benchmark Sweep?\n\n" +
+                    "This will:\n" +
+                    "1. Reset current telemetry and packet logs.\n" +
+                    "2. Run all 4 protocols ('baseline', 'rpl', 'pcertv3', 'pcertv4') sequentially.\n" +
+                    "3. Run each protocol for exactly 120 seconds of simulation time.\n" +
+                    "4. Reset batteries, ETX, and network topology between runs for an objective, fair baseline.\n" +
+                    "5. Run the sweep at 4x speed (takes only ~2 minutes total real-time).\n" +
+                    "6. Automatically compile all logs and trigger the downloads when complete.\n\n" +
+                    "Click 'OK' to start the automated sweep, or 'Cancel' to download current logs immediately."
+                );
 
-                autoRunActive = true;
-                autoRunPhase = 0;
-                autoRunCollectedBattery = [];
-                autoRunCollectedPackets = [];
-                autoRunSummaries = [];
-                autoRunStep();
+                if (runSweep) {
+                    // Reset all statistics, telemetry logs, and state
+                    batteryLog.length = 0;
+                    packetLog.length = 0;
+                    initAll();
+                    packets = [];
+                    simTime = 0;
+                    nextSpawn = 0;
+                    lastBatterySnapshotTime = 0;
+
+                    stats.baseline = { latSum: 0, cnt: 0, lost: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                    stats.rpl = { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                    stats.pcertv3 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                    stats.pcertv4 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                    updateScorecards();
+                    document.getElementById('elog').innerHTML = '';
+
+                    // Initialize Automated Sweep parameters
+                    sweepActive = true;
+                    sweepIndex = 0;
+                    sweepStartTime = 0;
+
+                    // Push speed to maximum (4x) for rapid completion
+                    speed = 4.0;
+                    document.getElementById('spdVal').textContent = '4×';
+                    document.getElementById('spdSlider').value = 4; // Slider index for 4x speed
+
+                    // Set first protocol and start simulation
+                    setProto(SWEEP_PROTOCOLS[0]);
+                    playing = true;
+
+                    // Update UI play/pause buttons
+                    document.getElementById('pulseDot').classList.add('active');
+                    document.getElementById('simStatus').textContent = 'LIVE';
+                    document.getElementById('btnPlay').style.display = 'none';
+                    document.getElementById('btnPause').style.display = '';
+
+                    log(`🚀 Starting Automated Benchmark Sweep: 120s per protocol at 4x speed...`, 'sys');
+                } else {
+                    triggerCSVExport();
+                }
             };
+
             const spds = [0.5, 1, 2, 4];
             document.getElementById('spdSlider').oninput = function () {
                 speed = spds[this.value - 1];
