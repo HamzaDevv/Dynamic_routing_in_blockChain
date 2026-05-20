@@ -1599,6 +1599,13 @@
         let prevBestHop = {};      // source-node → nodeId (hysteresis memory)
         let hysteresisBlocks = 0;  // times hysteresis prevented a switch
 
+        // ── Automated Benchmark Sweep ──────────────────────────────────
+        let sweepActive = false;
+        let sweepStartTime = 0;
+        let sweepIndex = 0;
+        const SWEEP_DURATION_PER_PROTO = 120.0;
+        const SWEEP_PROTOCOLS = ['baseline', 'rpl', 'pcertv3', 'pcertv4'];
+
         const stats = {
             baseline: { latSum: 0, cnt: 0, lost: 0, latencies: [],
                         tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} },
@@ -1981,6 +1988,45 @@
         // ── Tick ──────────────────────────────────────────────────────
         function tick(dt) {
             simTime += dt;
+
+            // ── Automated Sweep Check ──────────────────────────────────────
+            if (sweepActive) {
+                const sweepElapsed = simTime - sweepStartTime;
+                if (sweepElapsed >= SWEEP_DURATION_PER_PROTO) {
+                    sweepIndex++;
+                    if (sweepIndex < SWEEP_PROTOCOLS.length) {
+                        const nextProto = SWEEP_PROTOCOLS[sweepIndex];
+                        log(`✨ [Sweep] Protocol finished! Switching to ${PROTONAMES[nextProto]}`, 'sys');
+                        setProto(nextProto);
+                        
+                        // Reset everything back to healthy starting state for the next run
+                        initAll();
+                        packets = [];
+                        
+                        sweepStartTime = simTime;
+                    } else {
+                        // Sweep complete!
+                        sweepActive = false;
+                        playing = false;
+                        
+                        // Restore 1x speed
+                        speed = 1.0;
+                        document.getElementById('spdVal').textContent = '1×';
+                        document.getElementById('spdSlider').value = 2; // matches 1x
+                        
+                        // Pause the UI status
+                        document.getElementById('pulseDot').classList.remove('active');
+                        document.getElementById('simStatus').textContent = 'PAUSED';
+                        document.getElementById('btnPlay').style.display = '';
+                        document.getElementById('btnPause').style.display = 'none';
+                        
+                        log(`🎉 [Sweep Complete] Ran all 4 protocols for 120s each! Exporting now...`, 'sys');
+                        alert("Automated Benchmark Sweep Complete!\n\nAll 4 protocols were successfully evaluated for 120 seconds each under identical starting conditions.\n\nClick OK to download your telemetry CSV files.");
+                        triggerCSVExport();
+                    }
+                }
+            }
+
             // ETX slow recovery
             etxRecovery(dt);
 
@@ -2036,8 +2082,27 @@
     
             for (const p of packets) {
                 if (!p.alive) continue;
+                
+                // Guard against packets with no valid route from the source node
+                if (!p.path || p.path.length <= 1) {
+                    p.alive = false;
+                    recordDelivery(p, false);
+                    log(`❌ Packet route failed: no path from source #${p.path?.[0] ?? 'unknown'}`, 'fail');
+                    continue;
+                }
+
                 p.progress += spd * dt;
-                const u = nodes[p.path[p.currentIdx]], v = nodes[p.path[p.currentIdx + 1]];
+                const u = nodes[p.path[p.currentIdx]];
+                const v = nodes[p.path[p.currentIdx + 1]];
+                
+                // Guard against undefined next-hop node 'v'
+                if (!v) {
+                    p.alive = false;
+                    recordDelivery(p, false);
+                    log(`❌ Packet route failed: broken path at hop #${p.path[p.currentIdx]}`, 'fail');
+                    continue;
+                }
+
                 const pos = { x: u.x + (v.x - u.x) * p.progress, y: u.y + (v.y - u.y) * p.progress };
                 p.trail.push({ x: pos.x, y: pos.y, age: 0 });
                 if (p.trail.length > 22) p.trail.shift();
@@ -2489,7 +2554,7 @@
                 URL.revokeObjectURL(a.href);
             }
 
-            document.getElementById('btnExport').onclick = () => {
+            function triggerCSVExport() {
                 if (batteryLog.length === 0 && packetLog.length === 0) {
                     alert('No data yet! Run the simulation for at least 30 seconds first, then export.');
                     return;
@@ -2503,7 +2568,6 @@
 
                 // 3. Summary CSV (per protocol aggregate)
                 const PROTOCOLS = ['baseline','rpl','pcertv3','pcertv4'];
-                const TAG_NAMES  = {0:'Critical',1:'Standard',2:'Bulk'};
                 const summaryRows = [];
                 PROTOCOLS.forEach(p => {
                     const s = stats[p];
@@ -2527,6 +2591,62 @@
                 downloadCSV('simulation_summary.csv', summaryRows);
 
                 log(`⬇ Exported: battery_log.csv, packet_log.csv, simulation_summary.csv`, 'sys');
+            }
+
+            document.getElementById('btnExport').onclick = () => {
+                const runSweep = confirm(
+                    "Would you like to execute an Automated Benchmark Sweep?\n\n" +
+                    "This will:\n" +
+                    "1. Reset current telemetry and packet logs.\n" +
+                    "2. Run all 4 protocols ('baseline', 'rpl', 'pcertv3', 'pcertv4') sequentially.\n" +
+                    "3. Run each protocol for exactly 120 seconds of simulation time.\n" +
+                    "4. Reset batteries, ETX, and network topology between runs for an objective, fair baseline.\n" +
+                    "5. Run the sweep at 4x speed (takes only ~2 minutes total real-time).\n" +
+                    "6. Automatically compile all logs and trigger the downloads when complete.\n\n" +
+                    "Click 'OK' to start the automated sweep, or 'Cancel' to download current logs immediately."
+                );
+
+                if (runSweep) {
+                    // Reset all statistics, telemetry logs, and state
+                    batteryLog.length = 0;
+                    packetLog.length = 0;
+                    initAll();
+                    packets = [];
+                    simTime = 0;
+                    nextSpawn = 0;
+                    lastBatterySnapshotTime = 0;
+
+                    stats.baseline = { latSum: 0, cnt: 0, lost: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                    stats.rpl = { latSum: 0, cnt: 0, lost: 0, tSum: 0, tCnt: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                    stats.pcertv3 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                    stats.pcertv4 = { latSum: 0, cnt: 0, lost: 0, critLatSum: 0, critCnt: 0, lbEvents: 0, etxSaves: 0, hystBlocks: 0, latencies: [], tagCnt: {0:0,1:0,2:0}, tagLost: {0:0,1:0,2:0}, tagLatSum: {0:0,1:0,2:0} };
+                    updateScorecards();
+                    document.getElementById('elog').innerHTML = '';
+
+                    // Initialize Automated Sweep parameters
+                    sweepActive = true;
+                    sweepIndex = 0;
+                    sweepStartTime = 0;
+
+                    // Push speed to maximum (4x) for rapid completion
+                    speed = 4.0;
+                    document.getElementById('spdVal').textContent = '4×';
+                    document.getElementById('spdSlider').value = 4; // Slider index for 4x speed
+
+                    // Set first protocol and start simulation
+                    setProto(SWEEP_PROTOCOLS[0]);
+                    playing = true;
+
+                    // Update UI play/pause buttons
+                    document.getElementById('pulseDot').classList.add('active');
+                    document.getElementById('simStatus').textContent = 'LIVE';
+                    document.getElementById('btnPlay').style.display = 'none';
+                    document.getElementById('btnPause').style.display = '';
+
+                    log(`🚀 Starting Automated Benchmark Sweep: 120s per protocol at 4x speed...`, 'sys');
+                } else {
+                    triggerCSVExport();
+                }
             };
 
             const spds = [0.5, 1, 2, 4];

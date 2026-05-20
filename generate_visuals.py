@@ -24,34 +24,82 @@ import matplotlib.patches as mpatches
 import os
 import sys
 
-# Try to import pandas for CSV loading
-try:
-    import pandas as pd
-    PANDAS_OK = True
-except ImportError:
-    PANDAS_OK = False
+import csv
 
-# ── Load real CSVs if available ──────────────────────────────────────────────
-BATTERY_CSV = 'battery_log.csv'
-PACKET_CSV  = 'packet_log.csv'
-SUMMARY_CSV = 'simulation_summary.csv'
+# ── Load real CSVs if available (using built-in csv module to avoid pandas dependency) ──
+BATTERY_CSV = 'battery_log (3).csv'
+PACKET_CSV  = 'packet_log (3).csv'
+SUMMARY_CSV = 'simulation_summary (3).csv'
 
-battery_df = None
-packet_df  = None
-summary_df = None
+battery_data = None
+packet_data  = None
+summary_data = None
 
-if PANDAS_OK:
-    if os.path.exists(BATTERY_CSV):
-        battery_df = pd.read_csv(BATTERY_CSV)
-        print(f"✅ Real battery data loaded: {len(battery_df)} rows from {BATTERY_CSV}")
-    if os.path.exists(PACKET_CSV):
-        packet_df = pd.read_csv(PACKET_CSV)
-        print(f"✅ Real packet data loaded:  {len(packet_df)} rows from {PACKET_CSV}")
-    if os.path.exists(SUMMARY_CSV):
-        summary_df = pd.read_csv(SUMMARY_CSV)
-        print(f"✅ Real summary loaded from {SUMMARY_CSV}")
+# 1. Load real battery data
+if os.path.exists(BATTERY_CSV):
+    try:
+        raw_bat = {}
+        with open(BATTERY_CSV, 'r') as f:
+            reader = csv.DictReader(f)
+            for r in reader:
+                p = r['proto']
+                t = float(r['time'])
+                b = float(r['battery'])
+                if p not in raw_bat: raw_bat[p] = {}
+                if t not in raw_bat[p]: raw_bat[p][t] = []
+                raw_bat[p][t].append(b)
+        
+        # Compute average battery across all nodes per time step
+        battery_data = {}
+        for p, t_map in raw_bat.items():
+            sorted_times = sorted(t_map.keys())
+            means = [sum(t_map[t]) / len(t_map[t]) for t in sorted_times]
+            battery_data[p] = (np.array(sorted_times), np.array(means))
+        print(f"✅ Real battery data loaded: {len(raw_bat)} protocols from {BATTERY_CSV} (pure Python)")
+    except Exception as e:
+        print(f"⚠️ Could not load real battery CSV: {e}")
 
-if battery_df is None and packet_df is None:
+# 2. Load real packet latency data
+if os.path.exists(PACKET_CSV):
+    try:
+        packet_data = {'baseline': [], 'rpl': [], 'pcertv3': [], 'pcertv4': []}
+        row_count = 0
+        with open(PACKET_CSV, 'r') as f:
+            reader = csv.DictReader(f)
+            for r in reader:
+                p = r['proto']
+                success = int(r['success'])
+                if success == 1 and p in packet_data:
+                    packet_data[p].append(float(r['latencyMs']))
+                row_count += 1
+        # Convert lists to numpy arrays
+        for p in packet_data:
+            packet_data[p] = np.array(packet_data[p])
+        print(f"✅ Real packet data loaded: {row_count} rows from {PACKET_CSV} (pure Python)")
+    except Exception as e:
+        print(f"⚠️ Could not load real packet CSV: {e}")
+
+# 3. Load real simulation summary data
+if os.path.exists(SUMMARY_CSV):
+    try:
+        summary_data = {}
+        with open(SUMMARY_CSV, 'r') as f:
+            reader = csv.DictReader(f)
+            for r in reader:
+                p = r['protocol']
+                summary_data[p] = {
+                    'crit_dropped': int(r['crit_dropped']),
+                    'crit_delivered': int(r['crit_delivered']),
+                    'std_dropped': int(r['std_dropped']),
+                    'std_delivered': int(r['std_delivered']),
+                    'bulk_dropped': int(r['bulk_dropped']),
+                    'bulk_delivered': int(r['bulk_delivered'])
+                }
+        print(f"✅ Real summary loaded from {SUMMARY_CSV} (pure Python)")
+    except Exception as e:
+        print(f"⚠️ Could not load real summary CSV: {e}")
+
+if battery_data is None and packet_data is None:
     print("⚠️  No real CSV data found — using synthetic fallback data.")
     print("   Run the simulation and click 'Export Data' to get real measurements.\n")
 from matplotlib.patches import FancyArrowPatch
@@ -120,20 +168,12 @@ def pcer_v4_battery(t):
     noise = np.random.default_rng(45).normal(0, 0.15, len(t))
     return np.clip(base + noise, 0, 100)
 
-if battery_df is not None:
+if battery_data is not None:
     # Use real battery data
-    # battery_df: time,proto,nodeId,battery,type
-    t_ospf = battery_df[battery_df['proto'] == 'baseline'].groupby('time')['battery'].mean().index.to_numpy()
-    ospf_b = battery_df[battery_df['proto'] == 'baseline'].groupby('time')['battery'].mean().to_numpy()
-    
-    t_rpl = battery_df[battery_df['proto'] == 'rpl'].groupby('time')['battery'].mean().index.to_numpy()
-    rpl_b = battery_df[battery_df['proto'] == 'rpl'].groupby('time')['battery'].mean().to_numpy()
-    
-    t_v3 = battery_df[battery_df['proto'] == 'pcertv3'].groupby('time')['battery'].mean().index.to_numpy()
-    v3_b = battery_df[battery_df['proto'] == 'pcertv3'].groupby('time')['battery'].mean().to_numpy()
-    
-    t_v4 = battery_df[battery_df['proto'] == 'pcertv4'].groupby('time')['battery'].mean().index.to_numpy()
-    v4_b = battery_df[battery_df['proto'] == 'pcertv4'].groupby('time')['battery'].mean().to_numpy()
+    t_ospf, ospf_b = battery_data.get('baseline', (np.array([]), np.array([])))
+    t_rpl, rpl_b   = battery_data.get('rpl', (np.array([]), np.array([])))
+    t_v3, v3_b     = battery_data.get('pcertv3', (np.array([]), np.array([])))
+    t_v4, v4_b     = battery_data.get('pcertv4', (np.array([]), np.array([])))
 
     t = t_v4 if len(t_v4) > 0 else t # Fallback for x-axis in markers
 else:
@@ -153,7 +193,7 @@ ax.plot(t_v3, v3_b,   color=YELLOW, linewidth=2.5, label='PCER-T v3',          z
 ax.plot(t_v4, v4_b,   color=CYAN,   linewidth=3.0, label='PCER-T v4 + Web3',   zorder=5)
 
 # Death markers for OSPF
-if battery_df is None:
+if battery_data is None:
     death_times_ospf = [25, 31, 38, 44, 52]
     for td in death_times_ospf:
         idx = np.argmin(np.abs(t - td))
@@ -187,7 +227,7 @@ if len(v4_b) > 0:
                 color=CYAN, fontsize=9, fontweight='bold')
 
 # Dead node annotation
-if battery_df is None:
+if battery_data is None:
     ax.annotate('Node Deaths\n(Network Partition)', xy=(52, ospf_b[np.argmin(np.abs(t-52))]),
                 xytext=(60, 30), textcoords='data',
                 arrowprops=dict(arrowstyle='->', color=RED, lw=1.5),
@@ -219,15 +259,15 @@ print("Generating Chart 2: Packet Loss Rate...")
 protocols  = ['OSPF Baseline', 'RPL (OF0)', 'PCER-T v3', 'PCER-T v4 + Web3']
 tags       = ['Critical (Red)', 'Standard (Yellow)', 'Bulk (Blue)']
 colors_p   = [RED, ORANGE, YELLOW, GREEN]
-if summary_df is not None:
+if summary_data is not None:
     # Use real packet summary data
     data = {}
     for proto, lbl in zip(['baseline', 'rpl', 'pcertv3', 'pcertv4'], protocols):
-        row = summary_df[summary_df['protocol'] == proto]
-        if not row.empty:
-            c_drop = row['crit_dropped'].values[0]; c_del = row['crit_delivered'].values[0]
-            s_drop = row['std_dropped'].values[0];  s_del = row['std_delivered'].values[0]
-            b_drop = row['bulk_dropped'].values[0]; b_del = row['bulk_delivered'].values[0]
+        if proto in summary_data:
+            row = summary_data[proto]
+            c_drop = row['crit_dropped']; c_del = row['crit_delivered']
+            s_drop = row['std_dropped'];  s_del = row['std_delivered']
+            b_drop = row['bulk_dropped']; b_del = row['bulk_delivered']
             
             c_loss = (c_drop / (c_drop + c_del) * 100) if (c_drop + c_del) > 0 else 0
             s_loss = (s_drop / (s_drop + s_del) * 100) if (s_drop + s_del) > 0 else 0
@@ -393,12 +433,12 @@ def gen_latency(n, mean, std, skew=0):
         base += rng.exponential(skew, n)
     return np.clip(base, 1, None)
 
-if packet_df is not None:
+if packet_data is not None:
     # Real latency data
-    ospf_lat = packet_df[(packet_df['proto'] == 'baseline') & (packet_df['success'] == 1)]['latencyMs'].values
-    rpl_lat  = packet_df[(packet_df['proto'] == 'rpl')      & (packet_df['success'] == 1)]['latencyMs'].values
-    v3_lat   = packet_df[(packet_df['proto'] == 'pcertv3')  & (packet_df['success'] == 1)]['latencyMs'].values
-    v4_lat   = packet_df[(packet_df['proto'] == 'pcertv4')  & (packet_df['success'] == 1)]['latencyMs'].values
+    ospf_lat = packet_data['baseline']
+    rpl_lat  = packet_data['rpl']
+    v3_lat   = packet_data['pcertv3']
+    v4_lat   = packet_data['pcertv4']
 else:
     n = 1000
     ospf_lat  = gen_latency(n, 180, 60, 80)
@@ -411,9 +451,9 @@ apply_dark_theme(fig, [ax])
 
 for lats, col, lbl in [
     (ospf_lat, RED,    'OSPF Baseline'),
-    (rpl_lat,  ORANGE, 'RPL (OF0)'),
-    (v3_lat,   YELLOW, 'PCER-T v3'),
-    (v4_lat,   CYAN,   'PCER-T v4 + Web3'),
+    (rpl_lat,  ORANGE, 'RPL'),
+    (v3_lat,   YELLOW, 'PCER v1'),
+    (v4_lat,   CYAN,   'PCER v2'),
 ]:
     if len(lats) > 0:
         sorted_lat = np.sort(lats)
@@ -424,12 +464,12 @@ for lats, col, lbl in [
         p95 = np.percentile(lats, 95)
         ax.axvline(x=p50, color=col, linestyle=':', linewidth=0.8, alpha=0.5)
 
-# Shade PCER-T v4 region
+# Shade PCER v2 region
 if len(v4_lat) > 0:
     ax.fill_betweenx([0, 100], 0, np.percentile(v4_lat, 95),
                       color=CYAN, alpha=0.06)
     ax.text(np.percentile(v4_lat, 95) + 3, 50,
-            f'v4 P95 = {np.percentile(v4_lat,95):.0f}ms', color=CYAN, fontsize=9)
+            f'v2 P95 = {np.percentile(v4_lat,95):.0f}ms', color=CYAN, fontsize=9)
 
 ax.set_xlabel('End-to-End Packet Latency (ms)', fontsize=12)
 ax.set_ylabel('CDF (%)', fontsize=12)
@@ -440,7 +480,7 @@ ax.set_title('Latency CDF: Protocol Comparison (Critical Packets)',
 ax.legend(loc='lower right', framealpha=0.25, facecolor=PANEL,
           edgecolor=MUTED, labelcolor=TEXT, fontsize=10)
 fig.text(0.5, 0.01,
-         'Lower & steeper curve = better  |  PCER-T v4 achieves lowest median and tail latency',
+         'Lower & steeper curve = better  |  PCER v2 achieves lowest median and tail latency',
          ha='center', fontsize=9, color=MUTED)
 
 plt.tight_layout(rect=[0, 0.03, 1, 1])

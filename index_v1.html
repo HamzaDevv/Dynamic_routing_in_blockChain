@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PCER Mesh Overhaul — IoT Routing Demo</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet">
+  <style>
+    /* ── RESET & BASE ────────────────────────────────── */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      background: #f0f4f8;
+      color: #1a202c;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      font-size: 14px;
+    }
+
+    /* ── LAYOUT ──────────────────────────────────────── */
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      height: 100vh;
+      min-height: 800px;
+      gap: 0
+    }
+
+    .header {
+      grid-column: 1/-1;
+      padding: 16px 32px;
+      background: #ffffff;
+      border-bottom: 2px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      color: #1e293b;
+    }
+
+    .header h1 span {
+      color: #2563eb;
+    }
+
+    /* ── PROTOCOL TOGGLE ─────────────────────────────── */
+    .toggle-wrapper {
+      display: flex;
+      background: #cbd5e1;
+      border: 1px solid #94a3b8;
+      border-radius: 40px;
+      padding: 4px;
+      position: relative;
+    }
+
+    .toggle-btn {
+      background: transparent;
+      border: none;
+      color: #475569;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 8px 16px;
+      border-radius: 24px;
+      cursor: pointer;
+      position: relative;
+      z-index: 2;
+      transition: all .3s;
+      flex: 1;
+      text-align: center
+    }
+
+    .toggle-btn.active {
+      color: #000;
+    }
+
+    .toggle-pill {
+      position: absolute;
+      top: 4px;
+      bottom: 4px;
+      left: 4px;
+      width: calc(25% - 4px);
+      background: #ffffff;
+      border-radius: 24px;
+      z-index: 1;
+      transition: transform .3s cubic-bezier(0.4, 0.0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .15)
+    }
+
+    .toggle-wrapper[data-mode="baseline"] .toggle-pill {
+      background: #fee2e2;
+      border: 2px solid #ef4444;
+      transform: translateX(0)
+    }
+
+    .toggle-wrapper[data-mode="trad-pcer"] .toggle-pill {
+      background: #fef9c3;
+      border: 2px solid #eab308;
+      transform: translateX(calc(100% + 2px))
+    }
+
+    .toggle-wrapper[data-mode="pcer"] .toggle-pill {
+      background: #dcfce7;
+      border: 2px solid #22c55e;
+      transform: translateX(calc(200% + 4px))
+    }
+
+    .toggle-wrapper[data-mode="rpl"] .toggle-pill {
+      background: #ede9fe;
+      border: 2px solid #8b5cf6;
+      transform: translateX(calc(300% + 6px))
+    }
+
+    /* ── CANVAS ──────────────────────────────────────── */
+    .canvas-area {
+      position: relative;
+      overflow: hidden;
+      background: #f8fafc;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      z-index: 2
+    }
+
+    .grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, #cbd5e1 1.5px, transparent 1.5px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 1
+    }
+
+    /* ── SIDEBAR & DASHBOARD ─────────────────────────── */
+    .sidebar {
+      background: #ffffff;
+      border-left: 2px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    .sidebar-section {
+      padding: 12px 18px;
+      border-bottom: 2px solid #e2e8f0
+    }
+
+    .sidebar-section h3 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #475569;
+      margin-bottom: 12px;
+      font-weight: 800
+    }
+
+    /* Scorecard */
+    .score-card {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .score-card.baseline {
+      border-left: 6px solid #ef4444
+    }
+
+    .score-card.trad-pcer {
+      border-left: 6px solid #eab308
+    }
+
+    .score-card.pcer {
+      border-left: 6px solid #22c55e
+    }
+
+    .score-card.rpl {
+      border-left: 6px solid #8b5cf6
+    }
+
+    .score-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .score-title .badge {
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: #cbd5e1;
+      color: #475569;
+      display: none
+    }
+
+    .score-title .badge.active {
+      display: inline-block;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .score-card.baseline .badge.active {
+      background: #ef4444;
+    }
+
+    .score-card.trad-pcer .badge.active {
+      background: #eab308;
+    }
+
+    .score-card.pcer .badge.active {
+      background: #22c55e;
+    }
+
+    .score-card.rpl .badge.active {
+      background: #8b5cf6;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column
+    }
+
+    .metric span:first-child {
+      font-size: 11px;
+      color: #475569;
+      font-weight: 600;
+      margin-bottom: 4px
+    }
+
+    .metric span:last-child {
+      font-size: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .metric.loss span:last-child {
+      color: inherit;
+    }
+
+    /* Live Path Cost */
+    .cost-row {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #1e293b;
+      font-weight: 600;
+    }
+
+    .cost-row.best {
+      background: #dcfce7;
+      border: 2px solid #22c55e;
+      color: #166534
+    }
+
+    .cost-row.dead {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 2px solid #ef4444;
+    }
+
+    .empty-state {
+      font-size: 13px;
+      color: #64748b;
+      font-style: italic;
+      text-align: center;
+      padding: 12px
+    }
+
+    #costRows {
+      max-height: 100px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      padding-right: 4px;
+    }
+
+    #costRows::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #costRows::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    /* Event Log */
+    .event-log {
+      flex: 1;
+      overflow-y: scroll;
+      padding: 12px 18px;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f1f5f9;
+      min-height: 150px;
+    }
+
+    .event-log::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .event-log::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    .event-log::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+      border: 1px solid #f1f5f9;
+    }
+
+    .log-entry {
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      padding: 6px 0;
+      border-bottom: 1px solid #e2e8f0;
+      line-height: 1.6;
+      animation: fadeIn .3s;
+      color: #334155;
+    }
+
+    .log-entry .time {
+      color: #64748b
+    }
+
+    .log-entry .critical {
+      color: #dc2626;
+      font-weight: 800;
+    }
+
+    .log-entry .standard {
+      color: #d97706;
+      font-weight: 800;
+    }
+
+    .log-entry .bulk {
+      color: #2563eb;
+      font-weight: 800;
+    }
+
+    .log-entry.fail {
+      color: #dc2626;
+      background: #fee2e2;
+      padding-left: 8px;
+      border-left: 3px solid #dc2626;
+    }
+
+    /* ── CONTROLS ────────────────────────────────────── */
+    .controls {
+      grid-column: 1/-1;
+      padding: 16px 32px;
+      background: #ffffff;
+      border-top: 2px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s;
+      outline: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn:active {
+      transform: scale(.96)
+    }
+
+    .btn-play {
+      background: #2563eb;
+      color: #ffffff
+    }
+
+    .btn-pause {
+      background: #f59e0b;
+      color: #ffffff;
+    }
+
+    .btn-reset {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1
+    }
+
+    .btn-reset:hover {
+      background: #e2e8f0
+    }
+
+    .btn-add-crit {
+      background: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fca5a5;
+      font-size: 13px;
+      padding: 8px 16px
+    }
+
+    .speed-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-left: auto
+    }
+
+    .speed-group label {
+      font-size: 14px;
+      color: #475569;
+      font-weight: 700
+    }
+
+    .speed-slider {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 140px;
+      height: 6px;
+      border-radius: 6px;
+      background: #cbd5e1;
+      outline: none
+    }
+
+    .speed-slider::-webkit-slider-thumb {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #2563eb;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 0, 0, .2)
+    }
+
+    .speed-val {
+      font-size: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 800;
+      color: #1e293b;
+      min-width: 32px
+    }
+
+    /* ── ANIMATIONS ──────────────────────────────────── */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <!-- HEADER -->
+    <div class="header">
+      <div class="header-left">
+        <h1><span>PCER</span> IoT Network</h1>
+      </div>
+
+      <!-- PROTOCOL TOGGLE -->
+      <div class="toggle-wrapper" id="protocolToggle" data-mode="baseline" style="width:560px">
+        <div class="toggle-pill"></div>
+        <button class="toggle-btn active" id="btnBaseline">Baseline (OSPF)</button>
+        <button class="toggle-btn" id="btnTradPcer">Trad. PCER</button>
+        <button class="toggle-btn" id="btnPcer">Proposed PCER</button>
+        <button class="toggle-btn" id="btnRpl">Industry RPL</button>
+      </div>
+    </div>
+
+    <!-- CANVAS -->
+    <div class="canvas-area" id="canvasArea">
+      <div class="grid-bg"></div>
+      <canvas id="networkCanvas"></canvas>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <h3>Performance Dashboard</h3>
+
+        <!-- Baseline Score -->
+        <div class="score-card baseline" id="cardBaseline">
+          <div class="bg-glow"></div>
+          <div class="score-title">Baseline (Delay Only)
+            <span class="badge active" id="badgeBaseline">ACTIVE</span>
+          </div>
+          <div class="metric-grid" style="grid-template-columns: 1fr 1fr">
+            <div class="metric"><span>Avg Latency</span><span id="baseLatency">0 ms</span></div>
+            <div class="metric"><span>Total Delivered</span><span id="baseDelivered" style="color:#0f172a">0</span>
+            </div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric" style="color:#dc2626"><span>C. Latency</span><span id="baseLat0">0 ms</span></div>
+            <div class="metric" style="color:#d97706"><span>S. Latency</span><span id="baseLat1">0 ms</span></div>
+            <div class="metric" style="color:#2563eb"><span>B. Latency</span><span id="baseLat2">0 ms</span></div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric loss" style="color:#dc2626"><span>Crit. Lost</span><span id="baseLoss0">0</span></div>
+            <div class="metric loss" style="color:#d97706"><span>Std. Lost</span><span id="baseLoss1">0</span></div>
+            <div class="metric loss" style="color:#2563eb"><span>Bulk Lost</span><span id="baseLoss2">0</span></div>
+          </div>
+        </div>
+
+        <!-- Trad PCER Score -->
+        <div class="score-card trad-pcer" id="cardTradPcer" style="opacity:0.6">
+          <div class="bg-glow"></div>
+          <div class="score-title">Traditional PCER
+            <span class="badge" id="badgeTradPcer">ACTIVE</span>
+          </div>
+          <div class="metric-grid" style="grid-template-columns: 1fr 1fr">
+            <div class="metric"><span>Avg Latency</span><span id="tradLatency">0 ms</span></div>
+            <div class="metric"><span>Total Delivered</span><span id="tradDelivered" style="color:#0f172a">0</span>
+            </div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric" style="color:#dc2626"><span>C. Latency</span><span id="tradLat0">0 ms</span></div>
+            <div class="metric" style="color:#d97706"><span>S. Latency</span><span id="tradLat1">0 ms</span></div>
+            <div class="metric" style="color:#2563eb"><span>B. Latency</span><span id="tradLat2">0 ms</span></div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric loss" style="color:#dc2626"><span>Crit. Lost</span><span id="tradLoss0">0</span></div>
+            <div class="metric loss" style="color:#d97706"><span>Std. Lost</span><span id="tradLoss1">0</span></div>
+            <div class="metric loss" style="color:#2563eb"><span>Bulk Lost</span><span id="tradLoss2">0</span></div>
+          </div>
+        </div>
+
+        <!-- Proposed PCER Score -->
+        <div class="score-card pcer" id="cardPcer" style="opacity:0.6">
+          <div class="bg-glow"></div>
+          <div class="score-title">Proposed PCER
+            <span class="badge" id="badgePcer">ACTIVE</span>
+          </div>
+          <div class="metric-grid" style="grid-template-columns: 1fr 1fr">
+            <div class="metric"><span>Avg Latency</span><span id="pcerLatency">0 ms</span></div>
+            <div class="metric"><span>Total Delivered</span><span id="pcerDelivered" style="color:#0f172a">0</span>
+            </div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric" style="color:#dc2626"><span>C. Latency</span><span id="pcerLat0">0 ms</span></div>
+            <div class="metric" style="color:#d97706"><span>S. Latency</span><span id="pcerLat1">0 ms</span></div>
+            <div class="metric" style="color:#2563eb"><span>B. Latency</span><span id="pcerLat2">0 ms</span></div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric loss" style="color:#dc2626"><span>Crit. Lost</span><span id="pcerLoss0">0</span></div>
+            <div class="metric loss" style="color:#d97706"><span>Std. Lost</span><span id="pcerLoss1">0</span></div>
+            <div class="metric loss" style="color:#2563eb"><span>Bulk Lost</span><span id="pcerLoss2">0</span></div>
+          </div>
+        </div>
+
+        <!-- Industry RPL Score -->
+        <div class="score-card rpl" id="cardRpl" style="opacity:0.6">
+          <div class="bg-glow"></div>
+          <div class="score-title">Industry RPL
+            <span class="badge" id="badgeRpl">ACTIVE</span>
+          </div>
+          <div class="metric-grid" style="grid-template-columns: 1fr 1fr">
+            <div class="metric"><span>Avg Latency</span><span id="rplLatency" style="color:#7c3aed">0 ms</span></div>
+            <div class="metric"><span>Total Delivered</span><span id="rplDelivered" style="color:#0f172a">0</span>
+            </div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric" style="color:#dc2626"><span>C. Latency</span><span id="rplLat0">0 ms</span></div>
+            <div class="metric" style="color:#d97706"><span>S. Latency</span><span id="rplLat1">0 ms</span></div>
+            <div class="metric" style="color:#2563eb"><span>B. Latency</span><span id="rplLat2">0 ms</span></div>
+          </div>
+          <div class="metric-grid"
+            style="grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px;">
+            <div class="metric loss" style="color:#dc2626"><span>Crit. Lost</span><span id="rplLoss0">0</span></div>
+            <div class="metric loss" style="color:#d97706"><span>Std. Lost</span><span id="rplLoss1">0</span></div>
+            <div class="metric loss" style="color:#2563eb"><span>Bulk Lost</span><span id="rplLoss2">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>Live Routing Path</h3>
+        <div id="costRows">
+          <div class="empty-state">Waiting for packet...</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section" style="padding-bottom:10px;border-bottom:none;flex:none">
+        <h3>Event Log</h3>
+      </div>
+      <div class="event-log" id="eventLog"></div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <button class="btn btn-play" id="btnPlay">▶ Start Traffic</button>
+      <button class="btn btn-pause" id="btnPause" style="display:none">⏸ Pause</button>
+      <button class="btn btn-reset" id="btnReset">↺ Reset Network</button>
+
+      <div style="width:20px"></div>
+
+      <button class="btn btn-add-crit" id="btnManualCrit">🚨 Inject Critical Alert</button>
+
+      <div class="speed-group">
+        <label>Speed</label>
+        <input type="range" class="speed-slider" id="speedSlider" min="1" max="4" step="1" value="2">
+        <span class="speed-val" id="speedVal">1×</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ═════════════════════════════════════════════════════════
+    // 18-NODE MESH MULTI-DIRECTIONAL IoT SIMULATION
+    // ═════════════════════════════════════════════════════════
+
+    const TAG = { CRITICAL: 0, STANDARD: 1, BULK: 2 };
+    const TAG_NAMES = ['Critical', 'Standard', 'Bulk'];
+    const TAG_COLORS = ['#dc2626', '#d97706', '#2563eb'];
+    const TAG_CLASS = ['critical', 'standard', 'bulk'];
+
+    // ─── 18-NODE HERO SCENARIO MESH ──────────────────────────
+    const nodeDefinitions = [
+      // ROUTER -> CLOUD
+      { id: 0, label: "Router", icon: "🌐", type: "mains", initBat: 1.0 },
+
+      // TOP SLOW PATH (High Battery)
+      { id: 1, label: "Smart TV", icon: "📺", type: "mains", initBat: 1.0 },
+      { id: 2, label: "Laptop", icon: "💻", type: "mains", initBat: 1.0 },
+      { id: 3, label: "Fridge", icon: "🧊", type: "mains", initBat: 1.0 },
+      { id: 4, label: "AC Unit", icon: "❄️", type: "mains", initBat: 1.0 },
+
+      // MIDDLE SUPER HIGHWAY (Low delay, critically low battery)
+      { id: 5, label: "Sensor", icon: "📡", type: "fast", initBat: 0.15 },
+      { id: 6, label: "HeartMon", icon: "🫀", type: "fast", initBat: 0.08 }, // ★ The Victim!
+      { id: 7, label: "Watch", icon: "⌚", type: "fast", initBat: 0.12 },
+      { id: 8, label: "Drone", icon: "🚁", type: "fast", initBat: 0.15 },
+
+      // BOTTOM SLOW PATH (High Battery)
+      { id: 9, label: "Bulb", icon: "💡", type: "mains", initBat: 1.0 },
+      { id: 10, label: "Oven", icon: "♨️", type: "mains", initBat: 1.0 },
+      { id: 11, label: "Speaker", icon: "🔊", type: "mains", initBat: 1.0 },
+      { id: 12, label: "Tablet", icon: "📱", type: "med", initBat: 0.3 },
+
+      // SCATTERED MESH
+      { id: 13, label: "Alarm", icon: "🚨", type: "med", initBat: 0.5 },
+      { id: 14, label: "Doorbell", icon: "🚪", type: "med", initBat: 0.5 },
+      { id: 15, label: "OSPF Trap", icon: "🪤", type: "fast", initBat: 0.5 }, // OSPF (hop-count) blindly takes this 2-hop trap
+      { id: 16, label: "Cam", icon: "📷", type: "med", initBat: 0.5 },
+
+      { id: 17, label: "Cloud", icon: "☁️", type: "mains", initBat: 1.0 }
+    ];
+
+    const NUM_NODES = 18;
+
+    const edges = [
+      // Top Path (100ms total, safe)
+      [0, 1, 25], [1, 2, 25], [2, 3, 25], [3, 4, 25], [4, 17, 25],
+
+      // Middle Highway (20ms total, dangerous)
+      [0, 5, 5], [5, 6, 5], [6, 7, 5], [7, 8, 5], [8, 17, 5],
+
+      // Bottom Path (100ms total, safe)
+      [0, 9, 24], [9, 10, 24], [10, 11, 24], [11, 12, 24], [12, 17, 24],
+
+      // Inter-path mesh bridges (High delay)
+      [1, 5, 30], [2, 6, 30], [3, 7, 30], [4, 8, 30],
+      [5, 9, 30], [6, 10, 30], [7, 11, 30], [8, 12, 30],
+      [13, 2, 10], [5, 13, 10], [6, 14, 10], [10, 14, 10],
+      [16, 3, 10], [6, 16, 10],
+
+      // OSPF "Blind Shortest Path" Trap (Few hops, but massive delay)
+      [0, 15, 120], [15, 17, 120]
+    ];
+
+    const adj = {};
+    for (let i = 0; i < NUM_NODES; i++) adj[i] = [];
+
+    edges.forEach(e => {
+      const u = e[0], v = e[1], d = e[2];
+      adj[u].push({ node: v, delay: d });
+      adj[v].push({ node: u, delay: d });
+    });
+
+    // ─── STATE ───────────────────────────────────────────────
+    let nodes = [];
+    let packets = [];
+    let simTime = 0;
+    let playing = false;
+    let speed = 1;
+    let protocol = 'baseline'; // 'baseline', 'trad-pcer', 'pcer', 'rpl'
+    let nextSpawnTime = 0;
+    let lastFrameTime = 0;
+    let flashes = []; // {x, y, text, age, color}
+
+    const stats = {
+      baseline: { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] },
+      tradPcer: { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] },
+      pcer: { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] },
+      rpl: { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] }
+    };
+
+    let canvas, ctx, W, H;
+
+    // ─── INITIALIZATION ──────────────────────────────────────
+    function initNodes() {
+      nodes = nodeDefinitions.map(d => ({ ...d, battery: d.initBat, dead: false, trustScore: 1.0, transitCount: 0 }));
+      calcPositions();
+    }
+
+    function calcPositions() {
+      if (!W) return;
+      const paddingX = Math.min(100, W * 0.1);
+      const wAvail = W - paddingX * 2;
+      const hAvail = Math.min(H * 0.8, 600);
+
+      const layout = {
+        0: [0, 0.5],
+        // Top Path
+        1: [1, 0.15], 2: [2, 0.15], 3: [3, 0.15], 4: [4, 0.15],
+        // Middle Path
+        5: [1, 0.5], 6: [2, 0.5], 7: [3, 0.5], 8: [4, 0.5],
+        // Bottom Path
+        9: [1, 0.85], 10: [2, 0.85], 11: [3, 0.85], 12: [4, 0.85],
+        // Scattered (between lines)
+        13: [1.5, 0.35], 14: [2.5, 0.65], 15: [3.5, 0.35], 16: [2.5, 0.35],
+        17: [5, 0.5]
+      };
+
+      nodes.forEach(n => {
+        const l = layout[n.id];
+        n.x = paddingX + (l[0] / 5) * wAvail;
+        n.y = (H - hAvail) / 2 + l[1] * hAvail;
+      });
+    }
+
+    // ─── COST CALCULATION & DIJKSTRA PATHFINDING ─────────────
+    function getEdgeCost(protocol, tag, u, vNode, destId) {
+      const edge = edges.find(e => (e[0] === u && e[1] === vNode.id) || (e[1] === u && e[0] === vNode.id));
+      if (!edge) return Infinity;
+      const delay = edge[2];
+
+      // 1. OSPF (Baseline): Blind shortest-path (Hop-count), causing Critical to take slow 2-hop traps
+      if (protocol === 'baseline') return 1;
+
+      // 2. Industry RPL (MRHOF): Tag-agnostic, uses ETX (approximated by delay) + node energy
+      if (protocol === 'rpl') {
+        const energyCost = vNode.battery > 0.0001 ? (1.0 / vNode.battery) : 10000;
+        return delay + energyCost; // Static weights, ignores packet tag
+      }
+
+      // 3. PCER (Traditional & Proposed): Priority-Coupled Elastic weights
+      let w1 = 1, w2 = 1;
+      if (tag === 0) { w1 = 100; w2 = 0; }        // CRITICAL: Delay focused
+      else if (tag === 2) { w1 = 0; w2 = 100; }   // BULK: Energy focused
+
+      // Proposed PCER strict survival threshold
+      if (protocol === 'pcer' && vNode.battery < 0.05 && vNode.id !== destId) return Infinity;
+
+      const eCost = vNode.battery > 0.0001 ? (1.0 / vNode.battery) : 10000;
+      return (w1 * delay) + (w2 * eCost);
+    }
+
+    // Mathematically perfect Dijkstra ensures "no route" only fires when physically impossible
+    function calculateBestPath(src, destId, protocol, tag) {
+      const dist = {}, prev = {};
+      const q = [];
+      for (let i = 0; i < NUM_NODES; i++) {
+        dist[i] = Infinity; prev[i] = null; q.push(i);
+      }
+      dist[src] = 0;
+
+      while (q.length > 0) {
+        let uIdx = 0;
+        for (let i = 1; i < q.length; i++) if (dist[q[i]] < dist[q[uIdx]]) uIdx = i;
+        const u = q.splice(uIdx, 1)[0];
+
+        if (u === destId || dist[u] === Infinity) break;
+
+        adj[u].forEach(neighbor => {
+          if (!q.includes(neighbor.node)) return;
+          const vNode = nodes[neighbor.node];
+          // OSPF relies on static tables; emulate slow convergence causing it to route into dead nodes!
+          if (protocol !== 'baseline' && vNode.battery <= 0 && vNode.id !== destId) return;
+
+          const cost = getEdgeCost(protocol, tag, u, vNode, destId);
+          if (cost === Infinity) return;
+
+          if (dist[u] + cost < dist[neighbor.node]) {
+            dist[neighbor.node] = dist[u] + cost;
+            prev[neighbor.node] = u;
+          }
+        });
+      }
+
+      if (prev[destId] === null) return { path: [], failed: true };
+      const path = [];
+      let curr = destId;
+      while (curr !== null) { path.unshift(curr); curr = prev[curr]; }
+      return { path, failed: false };
+    }
+
+    // ─── PACKETS ─────────────────────────────────────────────
+    let pregeneratedPackets = [];
+    let packetIndex = 0;
+
+    function generateTrafficPlan() {
+      let currentSeed = 1337;
+      function prand() {
+        currentSeed = (currentSeed * 9301 + 49297) % 233280;
+        return currentSeed / 233280;
+      }
+      pregeneratedPackets = [];
+      let scheduledTime = 0;
+      for (let i = 0; i < 5000; i++) {
+        const tag = [0, 1, 1, 2, 2][Math.floor(prand() * 5)];
+        let srcIdx, destIdx;
+        if (prand() < 0.8) {
+          srcIdx = 0;
+          destIdx = 17;
+        } else {
+          srcIdx = Math.floor(prand() * NUM_NODES);
+          do { destIdx = Math.floor(prand() * NUM_NODES); } while (destIdx === srcIdx);
+        }
+        scheduledTime += 0.3 + prand() * 0.6;
+        pregeneratedPackets.push({ time: scheduledTime, srcId: srcIdx, destId: destIdx, tag: tag });
+      }
+    }
+
+    function spawnManualPacket() {
+      const activeNodes = nodes.filter(n => n.battery > 0);
+      if (activeNodes.length < 2) return;
+      let srcNode = nodes[0];
+      let destNode = nodes[17];
+      if (srcNode.battery <= 0 || destNode.battery <= 0) {
+        srcNode = activeNodes[Math.floor(Math.random() * activeNodes.length)];
+        do { destNode = nodes[Math.floor(Math.random() * nodes.length)]; } while (destNode.id === srcNode.id);
+      }
+      routeAndDispatchPacket(srcNode.id, destNode.id, 0); // Tag 0 Critical
+    }
+
+    function routeAndDispatchPacket(src, destId, tag) {
+      const srcNode = nodes[src];
+
+      const { path, failed } = calculateBestPath(src, destId, protocol, tag);
+
+      if (failed) {
+        // True definitive NO ROUTE partition
+        logEvent(`❌ ${TAG_NAMES[tag]} DROPPED at Source ${src} (NETWORK PARTITION)`, 'fail');
+        flashes.push({ x: srcNode.x, y: srcNode.y - 45, text: `❌ NO ROUTE (Partition)`, age: 0, color: '#dc2626' });
+
+        if (protocol === 'baseline') stats.baseline.lost[tag]++;
+        else if (protocol === 'trad-pcer') stats.tradPcer.lost[tag]++;
+        else stats.pcer.lost[tag]++;
+        updateScorecards();
+        return;
+      }
+
+      let routeCost = 0;
+      for (let i = 0; i < path.length - 1; i++) routeCost += getDelay(path[i], path[i + 1]);
+
+      const p = {
+        tag,
+        path,
+        destId,
+        currentPathIdx: 0,
+        progress: 0,
+        alive: true,
+        failedAt: -1,
+        failReason: null,
+        latency: routeCost,
+        accumulatedLatency: 0,
+        trail: []
+      };
+
+      packets.push(p);
+      updateSidebarPath(p, path);
+    }
+
+    function getDelay(u, v) {
+      const e = edges.find(e => (e[0] === u && e[1] === v) || (e[1] === u && e[0] === v));
+      return e ? e[2] : 999;
+    }
+
+    // ─── SIMULATION LOOP ─────────────────────────────────────
+    function tick(dt) {
+      simTime += dt;
+
+      nodes.forEach(n => {
+        if (n.type === 'mains') n.battery = 1.0;
+        else if (n.battery > 0) {
+          const drainRate = n.type === 'fast' ? 0.015 : 0.005;
+          n.battery = Math.max(0, n.battery - drainRate * dt);
+          if (n.battery === 0 && !n.dead) {
+            n.dead = true;
+            logEvent(`☠️ Node ${n.id} (${n.label}) battery died.`, 'fail');
+            n.trustScore = 0; // Blockchain records node failure
+          }
+        }
+      });
+
+      while (packetIndex < pregeneratedPackets.length && simTime >= pregeneratedPackets[packetIndex].time) {
+        const planned = pregeneratedPackets[packetIndex];
+        if (nodes[planned.srcId].battery > 0) {
+          routeAndDispatchPacket(planned.srcId, planned.destId, planned.tag);
+        }
+        packetIndex++;
+      }
+
+      const speedScale = 2.0;
+      for (const p of packets) {
+        if (!p.alive) continue;
+        p.progress += speedScale * dt;
+
+        const u = nodes[p.path[p.currentPathIdx]];
+        const v = nodes[p.path[p.currentPathIdx + 1]];
+
+        const pos = {
+          x: u.x + (v.x - u.x) * p.progress,
+          y: u.y + (v.y - u.y) * p.progress
+        };
+
+        p.trail.push({ x: pos.x, y: pos.y, age: 0 });
+        if (p.trail.length > 20) p.trail.shift();
+
+        if (p.progress >= 1.0) {
+          p.accumulatedLatency += getDelay(p.path[p.currentPathIdx], p.path[p.currentPathIdx + 1]);
+          p.currentPathIdx++;
+          p.progress = 0;
+
+          if (p.currentPathIdx >= p.path.length - 1) {
+            p.alive = false;
+            p.latency = p.accumulatedLatency;
+            recordStat(p, true);
+            flashes.push({ x: nodes[p.destId].x, y: nodes[p.destId].y - 45, text: `✅ DELIVERED`, age: 0, color: '#166534' });
+          } else {
+            // Mid-flight routing check (Evaluate the node we just arrived at AND the next hop)
+            const nextNode = nodes[p.path[p.currentPathIdx + 1]];
+            const currNode = nodes[p.path[p.currentPathIdx]];
+            const currNodeId = currNode.id;
+
+            const isDeadCurr = currNode.battery <= 0 && currNodeId !== p.destId;
+            const isDeadNext = nextNode && nextNode.battery <= 0 && nextNode.id !== p.destId;
+            const pcerDanger = protocol === 'pcer' && nextNode && nextNode.battery < 0.05 && nextNode.id !== p.destId;
+
+            if (isDeadCurr || isDeadNext || pcerDanger) {
+              if (isDeadCurr || (protocol !== 'pcer' && isDeadNext)) {
+                // The node we arrived at is dead, or (for legacy protocols) the next hop is dead. -> Hard Drop
+                p.alive = false;
+                p.failedAt = isDeadCurr ? p.path[p.currentPathIdx - 1] : currNodeId;
+                p.deadNextHop = isDeadCurr ? currNodeId : nextNode.id;
+                p.failReason = 'dead';
+                recordStat(p, false);
+                flashes.push({ x: nodes[p.failedAt].x, y: nodes[p.failedAt].y - 45, text: `❌ DROPPED`, age: 0, color: '#dc2626' });
+              } else if (protocol === 'pcer') {
+                // Proposed PCER dynamically reroutes mid-flight due to strict <0.05 danger threshold before hitting a dead node
+                const { path: newPath, failed } = calculateBestPath(currNodeId, p.destId, protocol, p.tag);
+
+                if (failed) {
+                  p.alive = false;
+                  p.failedAt = currNodeId;
+                  p.deadNextHop = nextNode.id;
+                  p.failReason = 'dead';
+                  recordStat(p, false);
+                  flashes.push({ x: nodes[p.failedAt].x, y: nodes[p.failedAt].y - 45, text: `❌ DEAD PATH`, age: 0, color: '#dc2626' });
+                } else {
+                  p.path = newPath;
+                  p.currentPathIdx = 0;
+                  flashes.push({ x: nodes[currNodeId].x, y: nodes[currNodeId].y - 45, text: `🔄 REROUTED`, age: 0, color: '#16a34a' });
+                  logEvent(`🔄 ${TAG_NAMES[p.tag]} dynamically rerouted at Node ${currNodeId} (Next node at risk). New Path: ${newPath.join('→')}`, 'standard');
+                  updateSidebarPath(p, newPath);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      for (const p of packets) {
+        for (const t of p.trail) t.age += dt;
+      }
+
+      for (const f of flashes) f.age += dt;
+
+      packets = packets.filter(p => p.alive || p.trail.some(t => t.age < 0.5));
+      flashes = flashes.filter(f => f.age < 1.5);
+    }
+
+    function recordStat(packet, success) {
+      if (!success) {
+        // Find which portion of the path we actually survived to print it correctly
+        const survivedPath = packet.path.slice(0, packet.currentPathIdx + 1);
+        const pathStr = survivedPath.join('→') + ' ✖';
+
+        let protocolContext = '';
+        if (protocol === 'baseline') protocolContext = ' (OSPF Blindness: Node Drained but Route persisted)';
+        else if (protocol === 'trad-pcer') protocolContext = ' (Trad PCER failure: Delay prioritized, ignored low battery)';
+        else if (protocol === 'rpl') protocolContext = ' (RPL failure: Did not proactively reroute)';
+
+        const reasonStr = packet.failReason === 'no_route' ? 'PARTITION' : `NEXT HOP NODE ${packet.deadNextHop} BATTERY EXHAUSTED${protocolContext}`;
+        logEvent(`❌ ${TAG_NAMES[packet.tag]} (to ${packet.destId}) DROPPED at Node ${packet.failedAt} | ${reasonStr} | Path: ${pathStr}`, 'fail');
+      } else {
+        const pathStr = packet.path.join('→');
+        logEvent(`✅ ${TAG_NAMES[packet.tag]} (to ${packet.destId}) delivered cleanly! (${packet.latency}ms). Path: ${pathStr}`, TAG_CLASS[packet.tag]);
+      }
+
+      if (protocol === 'baseline') {
+        if (success) { stats.baseline.count[packet.tag]++; stats.baseline.sum[packet.tag] += packet.latency; }
+        else { stats.baseline.lost[packet.tag]++; }
+      }
+      else if (protocol === 'trad-pcer') {
+        if (success) { stats.tradPcer.count[packet.tag]++; stats.tradPcer.sum[packet.tag] += packet.latency; }
+        else { stats.tradPcer.lost[packet.tag]++; }
+      }
+      else if (protocol === 'pcer') {
+        if (success) { stats.pcer.count[packet.tag]++; stats.pcer.sum[packet.tag] += packet.latency; }
+        else { stats.pcer.lost[packet.tag]++; }
+      }
+      else {
+        // RPL stats
+        if (success) { stats.rpl.count[packet.tag]++; stats.rpl.sum[packet.tag] += packet.latency; }
+        else { stats.rpl.lost[packet.tag]++; }
+      }
+      updateScorecards();
+    }
+
+    // ─── UI UPDATES ──────────────────────────────────────────
+    function logEvent(msg, cls) {
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${cls || ''}`;
+      entry.innerHTML = `<span class="time">[${simTime.toFixed(1)}s]</span> ${msg}`;
+      log.prepend(entry);
+      if (log.children.length > 50) log.removeChild(log.lastChild);
+    }
+
+    function updateSidebarPath(packet, path) {
+      const rows = document.getElementById('costRows');
+      let pName = protocol === 'baseline' ? 'OSPF' : (protocol === 'trad-pcer' ? 'Trad. PCER' : 'Proposed PCER');
+      let html = `<div style="font-size:11px;margin-bottom:8px;color:#8b9cb3">Sent <b style="color:${TAG_COLORS[packet.tag]}">${TAG_NAMES[packet.tag]}</b> via ${pName}:</div>`;
+
+      for (let i = 1; i < path.length; i++) {
+        const a = path[i];
+        html += `<div class="cost-row">
+      <span>→ Node ${a} ${nodes[a] ? nodes[a].icon : ''}</span>
+      <span>${getDelay(path[i - 1], a)}ms</span>
+    </div>`;
+      }
+      if (path.length === 0) {
+        html += `<div class="cost-row dead"><span>❌ NO ROUTE FOUND</span></div>`;
+      }
+
+      rows.innerHTML = html;
+      logEvent(`Dispatching ${TAG_NAMES[packet.tag]} to Dest ${packet.destId} (Resolved Path: ${path.join('→')})`, TAG_CLASS[packet.tag]);
+    }
+
+    function updateScorecards() {
+      const b = stats.baseline;
+      const t = stats.tradPcer;
+      const p = stats.pcer;
+
+      const totBaseCnt = b.count[0] + b.count[1] + b.count[2];
+      const totBaseSum = b.sum[0] + b.sum[1] + b.sum[2];
+      document.getElementById('baseLatency').textContent = totBaseCnt > 0 ? (totBaseSum / totBaseCnt).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('baseLat0').textContent = b.count[0] > 0 ? (b.sum[0] / b.count[0]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('baseLat1').textContent = b.count[1] > 0 ? (b.sum[1] / b.count[1]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('baseLat2').textContent = b.count[2] > 0 ? (b.sum[2] / b.count[2]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('baseLoss0').textContent = b.lost[0];
+      document.getElementById('baseLoss1').textContent = b.lost[1];
+      document.getElementById('baseLoss2').textContent = b.lost[2];
+      document.getElementById('baseDelivered').textContent = totBaseCnt;
+
+      const totTradCnt = t.count[0] + t.count[1] + t.count[2];
+      const totTradSum = t.sum[0] + t.sum[1] + t.sum[2];
+      document.getElementById('tradLatency').textContent = totTradCnt > 0 ? (totTradSum / totTradCnt).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('tradLat0').textContent = t.count[0] > 0 ? (t.sum[0] / t.count[0]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('tradLat1').textContent = t.count[1] > 0 ? (t.sum[1] / t.count[1]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('tradLat2').textContent = t.count[2] > 0 ? (t.sum[2] / t.count[2]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('tradLoss0').textContent = t.lost[0];
+      document.getElementById('tradLoss1').textContent = t.lost[1];
+      document.getElementById('tradLoss2').textContent = t.lost[2];
+      document.getElementById('tradDelivered').textContent = totTradCnt;
+
+      const totPcerCnt = p.count[0] + p.count[1] + p.count[2];
+      const totPcerSum = p.sum[0] + p.sum[1] + p.sum[2];
+      document.getElementById('pcerLatency').textContent = totPcerCnt > 0 ? (totPcerSum / totPcerCnt).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('pcerLat0').textContent = p.count[0] > 0 ? (p.sum[0] / p.count[0]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('pcerLat1').textContent = p.count[1] > 0 ? (p.sum[1] / p.count[1]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('pcerLat2').textContent = p.count[2] > 0 ? (p.sum[2] / p.count[2]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('pcerLoss0').textContent = p.lost[0];
+      document.getElementById('pcerLoss1').textContent = p.lost[1];
+      document.getElementById('pcerLoss2').textContent = p.lost[2];
+      document.getElementById('pcerDelivered').textContent = totPcerCnt;
+
+      const r = stats.rpl;
+      const totRplCnt = r.count[0] + r.count[1] + r.count[2];
+      const totRplSum = r.sum[0] + r.sum[1] + r.sum[2];
+      document.getElementById('rplLatency').textContent = totRplCnt > 0 ? (totRplSum / totRplCnt).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('rplLat0').textContent = r.count[0] > 0 ? (r.sum[0] / r.count[0]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('rplLat1').textContent = r.count[1] > 0 ? (r.sum[1] / r.count[1]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('rplLat2').textContent = r.count[2] > 0 ? (r.sum[2] / r.count[2]).toFixed(1) + ' ms' : '0 ms';
+      document.getElementById('rplLoss0').textContent = r.lost[0];
+      document.getElementById('rplLoss1').textContent = r.lost[1];
+      document.getElementById('rplLoss2').textContent = r.lost[2];
+      document.getElementById('rplDelivered').textContent = totRplCnt;
+    }
+
+    // ─── RENDER ──────────────────────────────────────────────
+    function render() {
+      ctx.clearRect(0, 0, W, H);
+
+      // Edges
+      ctx.lineWidth = 2.5;
+      for (const [uId, vId, delay] of edges) {
+        const u = nodes[uId], v = nodes[vId];
+        ctx.beginPath(); ctx.moveTo(u.x, u.y); ctx.lineTo(v.x, v.y);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.stroke();
+
+        const mx = (u.x + v.x) / 2, my = (u.y + v.y) / 2;
+        ctx.font = '10px Inter'; ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'center'; ctx.fillText(delay + 'ms', mx, my - 6);
+      }
+
+      // Trails
+      for (const p of packets) {
+        for (const t of p.trail) {
+          const alpha = Math.max(0, 1 - t.age * 2.5);
+          if (alpha <= 0) continue;
+          ctx.beginPath(); ctx.arc(t.x, t.y, 4, 0, Math.PI * 2);
+          const c = TAG_COLORS[p.tag];
+          const r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16);
+          ctx.fillStyle = `rgba(${r},${g},${b},${alpha * 0.7})`;
+          ctx.fill();
+        }
+      }
+
+      // Packets
+      for (const p of packets) {
+        if (!p.alive) continue;
+        const u = nodes[p.path[p.currentPathIdx]];
+        const v = nodes[p.path[p.currentPathIdx + 1]];
+        const pos = { x: u.x + (v.x - u.x) * p.progress, y: u.y + (v.y - u.y) * p.progress };
+
+        ctx.beginPath(); ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = TAG_COLORS[p.tag];
+        ctx.fill();
+
+        ctx.shadowBlur = 8; ctx.shadowColor = TAG_COLORS[p.tag];
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // Nodes
+      for (const n of nodes) {
+        const isDead = n.battery <= 0;
+
+        ctx.beginPath(); ctx.arc(n.x, n.y, 22, 0, Math.PI * 2);
+        ctx.fillStyle = isDead ? '#f1f5f9' : '#ffffff';
+        ctx.fill();
+
+        ctx.strokeStyle = isDead ? '#ef4444' : '#94a3b8';
+        ctx.lineWidth = 2.5; ctx.stroke();
+
+        ctx.font = '22px Arial';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.globalAlpha = isDead ? 0.3 : 1;
+        ctx.fillText(n.icon, n.x, n.y + 2);
+        ctx.globalAlpha = 1;
+
+        ctx.font = 'bold 9px Inter';
+        ctx.fillStyle = isDead ? '#dc2626' : '#1e293b';
+        ctx.fillText(n.id === 0 ? "Router" : n.id === 17 ? "Cloud" : n.id, n.x, n.y - 28);
+
+        if (n.type !== 'mains') {
+          const bw = 24, bh = 5;
+          const bx = n.x - bw / 2, by = n.y + 26;
+          ctx.fillStyle = '#e2e8f0'; ctx.fillRect(bx, by, bw, bh);
+
+          let fillCol = '#22c55e';
+          if (n.battery < 0.2) fillCol = '#eab308';
+          if (n.battery < 0.05) fillCol = '#ef4444';
+
+          ctx.fillStyle = fillCol; ctx.fillRect(bx, by, bw * n.battery, bh);
+
+          if (isDead) {
+            ctx.fillStyle = '#ef4444'; ctx.font = 'bold 16px Arial';
+            ctx.fillText("✖", n.x, n.y);
+          }
+
+          // RPL: Show blockchain trust score below battery bar
+          if (protocol === 'rpl') {
+            ctx.font = 'bold 8px JetBrains Mono';
+            ctx.fillStyle = n.trustScore > 0.7 ? '#22c55e' : (n.trustScore > 0.3 ? '#eab308' : '#ef4444');
+            ctx.textAlign = 'center';
+            ctx.fillText('T:' + (n.trustScore || 0).toFixed(1), n.x, n.y + 38);
+          }
+        }
+      }
+
+      // Flashes
+      for (const f of flashes) {
+        const a = Math.max(0, 1 - f.age / 1.5);
+        if (a > 0) {
+          ctx.globalAlpha = a;
+          ctx.fillStyle = f.color;
+          ctx.font = 'bold 13px Inter';
+          ctx.textAlign = 'center';
+          ctx.fillText(f.text, f.x, f.y - (f.age * 20));
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    // ─── ENGINE ──────────────────────────────────────────────
+    function loop(timestamp) {
+      if (!lastFrameTime) lastFrameTime = timestamp;
+      const dt = Math.min((timestamp - lastFrameTime) / 1000, 0.1) * speed;
+      lastFrameTime = timestamp;
+
+      if (playing) tick(dt);
+
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    function resize() {
+      const area = document.getElementById('canvasArea');
+      canvas.width = W = area.clientWidth;
+      canvas.height = H = area.clientHeight;
+      calcPositions();
+    }
+
+    function toggleProtocol(p) {
+      protocol = p;
+      const wrap = document.getElementById('protocolToggle');
+      wrap.setAttribute('data-mode', protocol);
+
+      document.getElementById('btnBaseline').className = 'toggle-btn ' + (p === 'baseline' ? 'active' : '');
+      document.getElementById('btnTradPcer').className = 'toggle-btn ' + (p === 'trad-pcer' ? 'active' : '');
+      document.getElementById('btnPcer').className = 'toggle-btn ' + (p === 'pcer' ? 'active' : '');
+      document.getElementById('btnRpl').className = 'toggle-btn ' + (p === 'rpl' ? 'active' : '');
+
+      const cards = ['Baseline', 'TradPcer', 'Pcer', 'Rpl'];
+      cards.forEach(c => {
+        let key = c.toLowerCase();
+        if (key === 'tradpcer') key = 'trad-pcer';
+        const isAct = p === key;
+        document.getElementById('badge' + c).className = 'badge ' + (isAct ? 'active' : '');
+        document.getElementById('card' + c).style.opacity = isAct ? '1' : '0.4';
+      });
+
+      let pName = 'OSPF Baseline';
+      if (p === 'trad-pcer') pName = 'Traditional PCER';
+      if (p === 'pcer') pName = 'Proposed PCER';
+      if (p === 'rpl') pName = 'Industry RPL';
+
+      // PAUSE SIMULATION ON PROTOCOL SWITCH
+      playing = false;
+      document.getElementById('btnPlay').style.display = '';
+      document.getElementById('btnPause').style.display = 'none';
+
+      logEvent(`<b>Protocol switched to ${pName}. Simulation paused.</b>`, "");
+    }
+
+    function init() {
+      canvas = document.getElementById('networkCanvas');
+      ctx = canvas.getContext('2d');
+
+      generateTrafficPlan();
+      initNodes();
+      resize();
+      window.addEventListener('resize', resize);
+
+      document.getElementById('btnBaseline').onclick = () => toggleProtocol('baseline');
+      document.getElementById('btnTradPcer').onclick = () => toggleProtocol('trad-pcer');
+      document.getElementById('btnPcer').onclick = () => toggleProtocol('pcer');
+      document.getElementById('btnRpl').onclick = () => toggleProtocol('rpl');
+
+      document.getElementById('btnPlay').onclick = () => {
+        playing = true;
+        document.getElementById('btnPlay').style.display = 'none';
+        document.getElementById('btnPause').style.display = '';
+      };
+      document.getElementById('btnPause').onclick = () => {
+        playing = false;
+        document.getElementById('btnPlay').style.display = '';
+        document.getElementById('btnPause').style.display = 'none';
+      };
+      document.getElementById('btnReset').onclick = () => {
+        initNodes();
+        packets = [];
+        simTime = 0;
+        packetIndex = 0;
+
+        let resetName = '';
+        if (protocol === 'baseline') {
+          stats.baseline = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
+          resetName = 'OSPF Baseline';
+        } else if (protocol === 'trad-pcer') {
+          stats.tradPcer = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
+          resetName = 'Traditional PCER';
+        } else if (protocol === 'pcer') {
+          stats.pcer = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
+          resetName = 'Proposed PCER';
+        } else if (protocol === 'rpl') {
+          stats.rpl = { count: [0, 0, 0], sum: [0, 0, 0], lost: [0, 0, 0] };
+          resetName = 'Industry RPL';
+        }
+
+        updateScorecards();
+        document.getElementById('eventLog').innerHTML = '';
+        logEvent(`<b>Network reset! Only ${resetName} stats became 0.</b>`, "");
+      };
+      document.getElementById('btnManualCrit').onclick = () => spawnManualPacket(); // Tag 0 Critical
+
+      const slider = document.getElementById('speedSlider');
+      const speeds = [0.5, 1, 2, 4];
+      slider.oninput = () => {
+        speed = speeds[slider.value - 1];
+        document.getElementById('speedVal').textContent = speed + '×';
+      };
+
+      requestAnimationFrame(loop);
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+
+</html>
